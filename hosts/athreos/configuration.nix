@@ -1,6 +1,6 @@
 { config, pkgs, ... }:
 
 {
-  networking.hostName = "kunorOS";
+  networking.hostName = "athreOS";
   system.stateVersion = "25.05";
 }
