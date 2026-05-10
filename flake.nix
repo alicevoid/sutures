@@ -15,14 +15,14 @@
         ];
       };
 
-#      athreos = nixpkgs.lib.nixosSystem {
-#        system = "x86_64-linux";
-#        modules = [
-#          ./modules/common.nix
-#          ./hosts/athreos/configuration.nix
-#          ./hosts/athreos/hardware-configuration.nix
-#        ];
-#      };
+      athreos = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./modules/common.nix
+          ./hosts/athreos/configuration.nix
+          ./hosts/athreos/hardware-configuration.nix
+        ];
+      };
 
     };
   };
