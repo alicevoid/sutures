@@ -31,8 +31,12 @@
   services.xserver.xkb = {
     layout = "us";
     variant = "";
-    options = "caps:escape";
   };
+
+  services.xserver.desktopManager.gnome.extraGSettingsOverrides = ''
+    [org.gnome.desktop.input-sources]
+    xkb-options=['caps:escape']
+  '';
 
   # Printing
   services.printing.enable = true;
