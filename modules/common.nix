@@ -33,10 +33,20 @@
     variant = "";
   };
 
-  services.xserver.desktopManager.gnome.extraGSettingsOverrides = ''
-    [org.gnome.desktop.input-sources]
-    xkb-options=['caps:escape']
-  '';
+  # keyd
+  services.keyd = {
+    enable = true;
+    keyboards = {
+      default = {
+        ids = [ "*" ];
+        settings = {
+          main = {
+            capslock = "escape";
+          };
+        };
+      };
+    };
+  };
 
   # Printing
   services.printing.enable = true;
