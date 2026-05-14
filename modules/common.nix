@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   # Bootloader
@@ -81,10 +81,19 @@
     gh
     claude-code
     python3Full
+    nvchad
   ];
 
   # Misc
   services.flatpak.enable = true;
   gtk.iconCache.enable = true;
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  # nvchad setup
+  nixpkgs.overlays = [
+    (final: prev: {
+      nvchad = inputs.nix4nvchad.packages."${pkgs.system}".nvchad;
+    })
+  ];
+
 }
