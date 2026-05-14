@@ -80,6 +80,7 @@
     git-extras
     gh
     claude-code
+    python3Full
   ];
 
   # Misc
