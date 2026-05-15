@@ -1,6 +1,9 @@
 { config, pkgs, inputs, ... }:
 
 {
+  # Experimental Features (Flakes)
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
   # Bootloader
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -67,6 +70,7 @@
     description = "alice";
     extraGroups = [ "networkmanager" "wheel" ];
     packages = with pkgs; [];
+    shell = pkgs.zsh;
   };
 
   # Packages
@@ -82,12 +86,21 @@
     claude-code
     python3Full
     nvchad
+    wl-clipboard
   ];
 
-  # Misc
+  # Misc 
   services.flatpak.enable = true;
   gtk.iconCache.enable = true;
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  # Zsh 
+  programs.zsh = {
+    enable = true;
+    ohMyZsh = {
+      enable = true;
+      theme = "lambda";  # default, we'll change this
+    };
+  };
 
   # nvchad setup
   nixpkgs.overlays = [
