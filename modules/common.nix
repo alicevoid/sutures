@@ -87,6 +87,7 @@
     python3Full
     nvchad
     wl-clipboard
+    filezilla
   ];
 
   # Misc 
