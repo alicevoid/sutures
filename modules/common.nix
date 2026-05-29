@@ -1,8 +1,16 @@
-{ config, pkgs, inputs, ... }:
+{
+  config,
+  pkgs,
+  inputs,
+  ...
+}:
 
 {
   # Experimental Features (Flakes)
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
 
   # Bootloader
   boot.loader.systemd-boot.enable = true;
@@ -29,8 +37,8 @@
 
   # GNOME
   services.xserver.enable = true;
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome.enable = true;
+  services.displayManager.gdm.enable = true;
+  services.desktopManager.gnome.enable = true;
   services.xserver.xkb = {
     layout = "us";
     variant = "";
@@ -68,8 +76,11 @@
   users.users.alice = {
     isNormalUser = true;
     description = "alice";
-    extraGroups = [ "networkmanager" "wheel" ];
-    packages = with pkgs; [];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+    ];
+    packages = with pkgs; [ ];
     shell = pkgs.zsh;
   };
 
@@ -84,22 +95,24 @@
     git-extras
     gh
     claude-code
-    python3Full
+    python3
     nvchad
     wl-clipboard
     filezilla
+    wireshark
+    unzip
   ];
 
-  # Misc 
+  # Misc
   services.flatpak.enable = true;
   gtk.iconCache.enable = true;
 
-  # Zsh 
+  # Zsh
   programs.zsh = {
     enable = true;
     ohMyZsh = {
       enable = true;
-      theme = "lambda";  # default, we'll change this
+      theme = "lambda"; # default, we'll change this
     };
   };
 
