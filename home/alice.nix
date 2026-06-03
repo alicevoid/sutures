@@ -38,7 +38,7 @@
 
   # NVChad config symlink — add this once you move your lua files into the repo
   xdg.configFile."nvim".source =
-    config.lib.file.mkOutOfStoreSymlink "/home/alice/nix-config/home/modules/nvim";
+    config.lib.file.mkOutOfStoreSymlink "/home/alice/Documents/nix-config/home/modules/nvim";
 
   programs.home-manager.enable = true;
 }
