@@ -6,7 +6,7 @@
 }:
 
 {
-  imports = [ ./modules/nixvim.nix ];
+  imports = [ ./modules/nixvim ];
 
   home.username = "alice";
   home.homeDirectory = "/home/alice";
