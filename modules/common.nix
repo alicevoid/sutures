@@ -87,40 +87,14 @@
   # Packages
   nixpkgs.config.allowUnfree = true;
   environment.systemPackages = with pkgs; [
-    firefox
-    vscode
     vim
-    obsidian
-    git
-    git-extras
-    gh
-    claude-code
-    python3
-    nvchad
-    wl-clipboard
-    filezilla
-    wireshark
-    unzip
   ];
 
   # Misc
   services.flatpak.enable = true;
   gtk.iconCache.enable = true;
 
-  # Zsh
-  programs.zsh = {
-    enable = true;
-    ohMyZsh = {
-      enable = true;
-      theme = "lambda"; # default, we'll change this
-    };
-  };
-
-  # nvchad setup
-  nixpkgs.overlays = [
-    (final: prev: {
-      nvchad = inputs.nix4nvchad.packages."${pkgs.system}".nvchad;
-    })
-  ];
+  # Zsh (enable as system shell; user config owned by home-manager)
+  programs.zsh.enable = true;
 
 }

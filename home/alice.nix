@@ -12,6 +12,7 @@
 
   # User packages (moved from environment.systemPackages / users.users.alice.packages)
   home.packages = with pkgs; [
+    neovim
     firefox
     vscode
     obsidian
