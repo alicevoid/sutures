@@ -1,5 +1,6 @@
 { ... }:
 {
+  programs.nixvim.colorschemes.catppuccin.enable = true;
   programs.nixvim.plugins = {
 
     # Icons (required by many plugins)
@@ -9,7 +10,6 @@
     lualine = {
       enable = true;
       settings.options = {
-        theme = "catppuccin";
         globalstatus = true;
         component_separators = { left = ""; right = ""; };
         section_separators = { left = ""; right = ""; };

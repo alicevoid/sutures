@@ -97,4 +97,9 @@
   # Zsh (enable as system shell; user config owned by home-manager)
   programs.zsh.enable = true;
 
+  # Nix Helper (nh)
+  programs.nh = {
+    enable = true;
+    flake = "/home/alice/Documents/nix-config";
+  };
 }

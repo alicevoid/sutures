@@ -122,7 +122,7 @@
           end
         '';
       }
-      { mode = "n"; key = "<leader>e"; action = ":NvimTreeToggle<CR>"; options = { silent = true; desc = "Toggle file tree"; }; }
+      { mode = "n"; key = "<leader>e"; action = ":NvimTreeFocus<CR>"; options = { silent = true; desc = "Toggle file tree"; }; }
       { mode = "n"; key = "<C-n>"; action = ":NvimTreeToggle<CR>"; options = { silent = true; desc = "Toggle file tree"; }; }
       # Terminal
       { mode = "n"; key = "<leader>h"; action = "<cmd>ToggleTerm direction=horizontal<CR>"; options = { silent = true; desc = "Horizontal terminal"; }; }

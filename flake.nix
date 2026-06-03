@@ -47,12 +47,12 @@
     in
     {
       nixosConfigurations = {
-        kunoros = mkSystem "x86_64-linux" [
+        kunorOS = mkSystem "x86_64-linux" [
           ./hosts/kunoros/configuration.nix
           ./hosts/kunoros/hardware-configuration.nix
         ];
 
-        athreos = mkSystem "x86_64-linux" [
+        athreOS = mkSystem "x86_64-linux" [
           ./hosts/athreos/configuration.nix
           ./hosts/athreos/hardware-configuration.nix
         ];
