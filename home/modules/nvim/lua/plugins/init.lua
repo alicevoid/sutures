@@ -1,5 +1,26 @@
 return {
   {
+    "williamboman/mason.nvim",
+    opts = {
+      ensure_installed = {
+        "basedpyright",
+        "black",
+        "css-lsp",
+        "html-lsp",
+        "nil",
+        "nixfmt",
+        "nixpkgs-fmt",
+        "prettier",
+        "ruff",
+        "statix",
+        "stylua",
+        "svelte-language-server",
+        "typescript-language-server",
+      },
+    },
+  },
+
+  {
     "stevearc/conform.nvim",
     -- event = 'BufWritePre', -- uncomment for format on save
     opts = require "configs.conform",
