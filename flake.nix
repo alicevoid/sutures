@@ -9,6 +9,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nixvim.url = "github:nix-community/nixvim/nixos-26.05";
+
   };
 
   outputs =
@@ -16,6 +18,7 @@
       self,
       nixpkgs,
       home-manager,
+      nixvim,
     }@inputs:
     let
       mkSystem =
@@ -29,7 +32,12 @@
             {
               home-manager.useGlobalPkgs = true; # uses system nixpkgs, no duplicate downloads
               home-manager.useUserPackages = true; # installs HM packages into user profile
-              home-manager.users.alice = import ./home/alice.nix;
+              home-manager.users.alice = {
+                imports = [
+                  nixvim.homeModules.nixvim
+                  ./home/alice.nix
+                ];
+              };
               home-manager.extraSpecialArgs = { inherit inputs; };
             }
           ]
