@@ -25,6 +25,7 @@
     filezilla
     wireshark
     unzip
+    ffmpeg
   ];
 
   programs.zsh = {
