@@ -26,6 +26,7 @@
     wireshark
     unzip
     ffmpeg
+    pngquant
   ];
 
   programs.zsh = {
