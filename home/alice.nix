@@ -27,6 +27,7 @@
     unzip
     ffmpeg
     pngquant
+    htop
   ];
 
   programs.zsh = {
