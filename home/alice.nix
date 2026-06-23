@@ -28,6 +28,7 @@
     ffmpeg
     pngquant
     htop
+    zoom-us
   ];
 
   programs.zsh = {
