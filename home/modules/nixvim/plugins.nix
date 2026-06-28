@@ -153,7 +153,7 @@
       };
     };
 
-    # LSP — nixvim automatically provides each server's binary
+    # LSP: nixvim automatically provides each server's binary
     lsp = {
       enable = true;
       keymaps = {
