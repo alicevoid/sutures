@@ -29,6 +29,7 @@
     pngquant
     htop
     zoom-us
+    grim
   ];
 
   programs.zsh = {
@@ -36,6 +37,13 @@
     oh-my-zsh = {
       enable = true;
       theme = "lambda";
+    };
+  };
+
+  services.flameshot = {
+    enable = true;
+    settings.General = {
+      showStartupLaunchMessage = false;
     };
   };
 

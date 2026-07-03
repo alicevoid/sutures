@@ -54,6 +54,9 @@
           main = {
             capslock = "escape";
           };
+          alt = {
+            sysrq = "command(systemd-run --user --machine=alice@.host --collect -- ${pkgs.flameshot}/bin/flameshot gui)";
+          };
         };
       };
     };
@@ -96,9 +99,6 @@
 
   # Zsh (enable as system shell; user config owned by home-manager)
   programs.zsh.enable = true;
-
-  # Steam
-  programs.steam.enable = true;
 
   # Nix Helper (nh)
   programs.nh = {

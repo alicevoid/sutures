@@ -48,11 +48,13 @@
     {
       nixosConfigurations = {
         kunorOS = mkSystem "x86_64-linux" [
+          ./modules/gaming.nix
           ./hosts/kunoros/configuration.nix
           ./hosts/kunoros/hardware-configuration.nix
         ];
 
         athreOS = mkSystem "x86_64-linux" [
+          ./modules/gaming.nix
           ./hosts/athreos/configuration.nix
           ./hosts/athreos/hardware-configuration.nix
         ];

@@ -89,6 +89,7 @@
         { __unkeyed-1 = "<leader>c"; group = "Code action"; }
         { __unkeyed-1 = "<leader>D"; group = "Type definition"; }
         { __unkeyed-1 = "<leader>fm"; group = "Format"; }
+        { __unkeyed-1 = "<leader>s"; group = "Surround"; }
       ];
     };
 
