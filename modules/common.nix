@@ -97,6 +97,9 @@
   # Zsh (enable as system shell; user config owned by home-manager)
   programs.zsh.enable = true;
 
+  # Steam
+  programs.steam.enable = true;
+
   # Nix Helper (nh)
   programs.nh = {
     enable = true;
