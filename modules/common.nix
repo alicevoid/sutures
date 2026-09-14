@@ -99,6 +99,10 @@
   # Misc
   services.flatpak.enable = true;
   gtk.iconCache.enable = true;
+  services.avahi = {
+    enable = true; 
+    nssmdns4 = true; 
+  };
 
   # Zsh (enable as system shell; user config owned by home-manager)
   programs.zsh.enable = true;
