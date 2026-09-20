@@ -18,7 +18,7 @@
     keyMap = "us";
   };
 
-  # wifi via NetworkManager
+  # wifi NetworkManager
   networking.networkmanager.enable = true;
   # networking.networkmanager.unmanaged = [ "eno2" ];
 
@@ -80,6 +80,7 @@
     curl
     pciutils
     usbutils
+    k3s
   ];
 
   # ssd trim
