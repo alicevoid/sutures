@@ -71,6 +71,7 @@
 
         pharika = mkSystem [
           ./modules/server.nix
+          ./modules/k3s.nix
           ./hosts/pharika/configuration.nix
           ./hosts/pharika/hardware-configuration.nix
         ];
