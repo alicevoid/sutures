@@ -62,6 +62,23 @@ in
                 # :stable is a moving tag — pin to a version (e.g.
                 # neosmemo/memos:0.24.0) when you want reproducible upgrades.
                 image = "neosmemo/memos:stable";
+                # Recent images don't bake in a default port, so an unset port
+                # resolves to 0 and Memos binds nowhere ("running on port 0").
+                # Set it (and mode/data-dir) explicitly via MEMOS_* env.
+                env = [
+                  {
+                    name = "MEMOS_MODE";
+                    value = "prod";
+                  }
+                  {
+                    name = "MEMOS_PORT";
+                    value = toString port;
+                  }
+                  {
+                    name = "MEMOS_DATA";
+                    value = "/var/opt/memos";
+                  }
+                ];
                 ports = [ { containerPort = port; } ];
                 volumeMounts = [
                   {
