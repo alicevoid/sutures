@@ -1,8 +1,8 @@
 { pkgs, ... }:
 
 # Single-node k3s cluster (control-plane + workloads on one box).
-# Imported by pharika in flake.nix. State lives in /var/lib/rancher/k3s
-# (persistent ext4 root, no extra config needed).
+# Imported via modules/k8s/default.nix (wired to pharika in flake.nix).
+# State lives in /var/lib/rancher/k3s (persistent ext4 root, no extra config).
 {
   services.k3s = {
     enable = true;

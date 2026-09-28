@@ -71,7 +71,7 @@
 
         pharika = mkSystem [
           ./modules/server.nix
-          ./modules/k3s.nix
+          ./modules/k8s # k3s cluster + LGTM observability stack
           ./hosts/pharika/configuration.nix
           ./hosts/pharika/hardware-configuration.nix
         ];
