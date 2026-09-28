@@ -1,28 +1,15 @@
 { pkgs, ... }:
 
+# pharika — server host specifics only.
+# Shared config comes from modules/common.nix + modules/server.nix (wired in flake.nix).
 {
   imports = [ ./hardware-configuration.nix ];
 
-  # boot
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-
   # host
   networking.hostName = "pharika";
-  time.timeZone = "America/Los_Angeles";
-  i18n.defaultLocale = "en_US.UTF-8";
 
-  # console
-  console = {
-    font = "Lat2-Terminus16";
-    keyMap = "us";
-  };
-
-  # wifi NetworkManager
-  networking.networkmanager.enable = true;
+  # Optional static ethernet (leave commented unless needed)
   # networking.networkmanager.unmanaged = [ "eno2" ];
-
-  # static ethernet
   # networking.interfaces.eno2.ipv4.addresses = [{
   #   address = "10.0.0.3";
   #   prefixLength = 24;
@@ -33,58 +20,20 @@
   # };
   # networking.nameservers = [ "1.1.1.1" "9.9.9.9" ];
 
-  # firewall
-  networking.firewall.enable = true;
+  # user (server extras on top of the base alice from common.nix)
+  # TODO: add hosts/pharika/keys/athreos.pub and re-enable this. SSH is
+  # key-only (PasswordAuthentication = false), so without a key you cannot
+  # log in remotely — add the key before relying on remote access.
+  # users.users.alice.openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
 
-  # mdns -> pharika.local
-  services.avahi = {
-    enable = true;
-    openFirewall = true;
-    nssmdns4 = true;
-    publish = {
-      enable = true;
-      addresses = true;
-    };
-  };
-
-  # nix daemon
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  nix.settings.auto-optimise-store = true;
-  nix.gc = {
-    automatic = true;
-    dates = "weekly";
-    options = "--delete-older-than 30d";
-  };
-
-  # user
-  users.users.alice = {
-    isNormalUser = true;
-    extraGroups = [ "wheel" "networkmanager" ];
-    openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
-  };
-
-  # ssh
-  services.openssh = {
-    enable = true;
-    settings = {
-      PasswordAuthentication = false;
-      KbdInteractiveAuthentication = false;
-      PermitRootLogin = "no";
-    };
-  };
-
-  # packages
+  # host-specific packages
   environment.systemPackages = with pkgs; [
     git
-    vim
     curl
     pciutils
     usbutils
     k3s
   ];
-
-  # ssd trim
-  services.fstrim.enable = true;
 
   # never change
   system.stateVersion = "26.05";

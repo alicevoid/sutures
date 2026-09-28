@@ -5,6 +5,8 @@
   ...
 }:
 
+# Truly shared configuration — applied to EVERY host (laptops + servers).
+# Anything graphical/desktop-only lives in desktop.nix; server-only in server.nix.
 {
   # Experimental Features (Flakes)
   nix.settings.experimental-features = [
@@ -12,7 +14,7 @@
     "flakes"
   ];
 
-  # Bootloader
+  # Bootloader (all hosts are systemd-boot / EFI)
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.configurationLimit = 3;
@@ -22,6 +24,13 @@
 
   # Tailscale (system daemon; run `sudo tailscale up` once to authenticate)
   services.tailscale.enable = true;
+
+  # mDNS resolution: every host can resolve *.local (e.g. pharika.local).
+  # Servers additionally *publish* their name — see server.nix.
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+  };
 
   # Locale & timezone
   time.timeZone = "America/Los_Angeles";
@@ -38,47 +47,7 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-  # GNOME
-  services.xserver.enable = true;
-  services.displayManager.gdm.enable = true;
-  services.desktopManager.gnome.enable = true;
-  services.xserver.xkb = {
-    layout = "us";
-    variant = "";
-  };
-
-  # keyd
-  services.keyd = {
-    enable = true;
-    keyboards = {
-      default = {
-        ids = [ "*" ];
-        settings = {
-          main = {
-            capslock = "escape";
-          };
-          alt = {
-            sysrq = "command(systemd-run --user --machine=alice@.host --collect -- ${pkgs.flameshot}/bin/flameshot gui)";
-          };
-        };
-      };
-    };
-  };
-
-  # Printing
-  services.printing.enable = true;
-
-  # Audio
-  services.pulseaudio.enable = false;
-  security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-  };
-
-  # User
+  # User (base identity — shared everywhere)
   users.users.alice = {
     isNormalUser = true;
     description = "alice";
@@ -95,14 +64,6 @@
   environment.systemPackages = with pkgs; [
     vim
   ];
-
-  # Misc
-  services.flatpak.enable = true;
-  gtk.iconCache.enable = true;
-  services.avahi = {
-    enable = true; 
-    nssmdns4 = true; 
-  };
 
   # Zsh (enable as system shell; user config owned by home-manager)
   programs.zsh.enable = true;
