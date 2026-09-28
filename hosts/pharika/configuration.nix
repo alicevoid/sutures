@@ -21,10 +21,9 @@
   # networking.nameservers = [ "1.1.1.1" "9.9.9.9" ];
 
   # user (server extras on top of the base alice from common.nix)
-  # TODO: add hosts/pharika/keys/athreos.pub and re-enable this. SSH is
-  # key-only (PasswordAuthentication = false), so without a key you cannot
-  # log in remotely — add the key before relying on remote access.
-  # users.users.alice.openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
+  # SSH is key-only (PasswordAuthentication = false); this key from athreos
+  # is what lets alice log in remotely.
+  users.users.alice.openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
 
   # host-specific packages
   environment.systemPackages = with pkgs; [

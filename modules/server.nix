@@ -4,7 +4,7 @@
   ...
 }:
 
-# Server class — headless base. No desktop, no audio.
+# Server class - headless base. No desktop, no audio.
 # Applied to pharika.
 {
   # SSH (hardened: keys only)
