@@ -63,6 +63,13 @@
   nixpkgs.config.allowUnfree = true;
   environment.systemPackages = with pkgs; [
     vim
+    git
+    curl
+    python3
+    gh
+    git-extras
+    pciutils
+    usbutils
   ];
 
   # Zsh (enable as system shell; user config owned by home-manager)

@@ -22,7 +22,6 @@
     }@inputs:
     let
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
 
       # Home-manager wiring, shared by every host (full home everywhere).
       homeManager = {
@@ -75,18 +74,6 @@
           ./hosts/pharika/configuration.nix
           ./hosts/pharika/hardware-configuration.nix
         ];
-      };
-
-      # Ephemeral, user-space profiles — enter with `nix develop .#<name>`,
-      # everything disappears when you exit the shell. See PROFILES.md.
-      devShells.${system} = {
-        dev = pkgs.mkShell {
-          packages = with pkgs; [
-            python3
-            gh
-            git-extras
-          ];
-        };
       };
     };
 }

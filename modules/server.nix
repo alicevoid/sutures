@@ -46,4 +46,9 @@
 
   # SSD trim
   services.fstrim.enable = true;
+
+  # Server-class packages
+  environment.systemPackages = with pkgs; [
+    k3s
+  ];
 }

@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ ... }:
 
 # pharika — server host specifics only.
 # Shared config comes from modules/common.nix + modules/server.nix (wired in flake.nix).
@@ -24,15 +24,6 @@
   # SSH is key-only (PasswordAuthentication = false); this key from athreos
   # is what lets alice log in remotely.
   users.users.alice.openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
-
-  # host-specific packages
-  environment.systemPackages = with pkgs; [
-    git
-    curl
-    pciutils
-    usbutils
-    k3s
-  ];
 
   # never change
   system.stateVersion = "26.05";
