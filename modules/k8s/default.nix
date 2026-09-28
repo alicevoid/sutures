@@ -6,5 +6,6 @@
   imports = [
     ./k3s.nix # single-node cluster
     ./observability.nix # LGTM stack (Loki/Grafana/Tempo/Metrics)
+    ./memos.nix # tiny self-hosted memo app (first workload)
   ];
 }
