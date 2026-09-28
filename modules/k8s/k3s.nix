@@ -17,7 +17,11 @@
     # Trust the CNI bridge so pods can reach the API server and CoreDNS.
     # Skipping this is the classic "DNS doesn't work inside pods" gotcha.
     trustedInterfaces = [ "cni0" ];
-    allowedTCPPorts = [ 6443 ]; # Kubernetes API server
+    allowedTCPPorts = [
+      6443 # Kubernetes API server
+      80 # Traefik ingress (HTTP) — Grafana etc.
+      443 # Traefik ingress (HTTPS)
+    ];
   };
 
   # On-box admin tooling. `services.k3s` already puts the bundled `k3s`

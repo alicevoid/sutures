@@ -16,9 +16,10 @@
 # /var/lib/rancher/k3s/storage on the ext4 root).
 #
 # NOTE ON SECRETS: `values` set here land unencrypted in the world-readable
-# nix store. The only secret below is Grafana's admin password — fine for a
-# single-user homelab, but swap to grafana.admin.existingSecret + sops/agenix
-# if this box ever grows more users.
+# nix store, and this is a public repo — so NO secrets go in `values`.
+# Grafana's admin login comes from a k8s Secret named `grafana-admin` created
+# directly on pharika (one-time `kubectl create secret`, see README/memory),
+# so the password lives only in the cluster datastore, never in git or nix.
 
 let
   ns = "monitoring";
@@ -38,7 +39,14 @@ in
       values = {
         # Grafana is our single pane of glass for L, G, T and M.
         grafana = {
-          adminPassword = "changeme-homelab"; # see SECRETS note above
+          # Admin login comes from the out-of-band `grafana-admin` Secret
+          # (keys admin-user / admin-password), NOT from this repo. Create it
+          # on pharika before this chart starts, or Grafana won't schedule.
+          admin = {
+            existingSecret = "grafana-admin";
+            userKey = "admin-user";
+            passwordKey = "admin-password";
+          };
           persistence = {
             enabled = true;
             storageClassName = localPath;
@@ -226,6 +234,38 @@ in
           size = "10Gi";
         };
       };
+    };
+  };
+
+  # ---- Ingress: reach Grafana over the tailnet without port-forwarding ----
+  # k3s bundles Traefik as its ingress controller. This host-less Ingress
+  # routes all HTTP :80 traffic to Grafana, so any name that resolves to
+  # pharika works: http://pharika/ (Tailscale MagicDNS) or pharika.local.
+  # (Plain HTTP is fine here — Tailscale already encrypts the transport.)
+  services.k3s.manifests.grafana-ingress.content = {
+    apiVersion = "networking.k8s.io/v1";
+    kind = "Ingress";
+    metadata = {
+      name = "grafana";
+      namespace = ns;
+      annotations."traefik.ingress.kubernetes.io/router.entrypoints" = "web";
+    };
+    spec = {
+      ingressClassName = "traefik";
+      rules = [
+        {
+          http.paths = [
+            {
+              path = "/";
+              pathType = "Prefix";
+              backend.service = {
+                name = "kube-prometheus-stack-grafana";
+                port.number = 80;
+              };
+            }
+          ];
+        }
+      ];
     };
   };
 }
