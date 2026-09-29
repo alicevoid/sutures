@@ -78,6 +78,6 @@
   # Nix Helper (nh)
   programs.nh = {
     enable = true;
-    flake = "/home/alice/Documents/sutures";
+    flake = "/home/alice/sutures";
   };
 }
