@@ -1,11 +1,9 @@
 { ... }:
 
-# All Kubernetes (k3s) config for pharika lives under modules/k8s/.
-# Wired into the `pharika` system in flake.nix as `./modules/k8s`.
 {
   imports = [
-    ./k3s.nix # single-node cluster
-    ./observability.nix # LGTM stack (Loki/Grafana/Tempo/Metrics)
-    ./memos.nix # tiny self-hosted memo app (first workload)
+    ./k3s.nix 
+    ./observability.nix 
+    ./memos.nix            
   ];
 }

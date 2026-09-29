@@ -172,7 +172,6 @@
 
     extraConfigLua = ''
       -- ── Cheatsheet ────────────────────────────────────────────────────────────
-      -- Add / remove entries here. Each section is { section = "Name", entries = { { "keys", "desc" }, ... } }
       local _cheatsheet = {
         { section = "LSP", entries = {
           { "gd",           "Go to definition" },
@@ -272,9 +271,6 @@
           layout_config = { width = 0.55, height = 0.65 },
           attach_mappings = function(prompt_bufnr)
             local actions = require("telescope.actions")
-            -- The entries are reference rows, not files. Replace the default
-            -- <CR> action (which tries to :edit the entry and errors on the
-            -- function-valued `display`) with a plain close.
             actions.select_default:replace(function()
               actions.close(prompt_bufnr)
             end)

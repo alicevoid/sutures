@@ -1,14 +1,12 @@
 { ... }:
 
-# pharika — server host specifics only.
-# Shared config comes from modules/common.nix + modules/server.nix (wired in flake.nix).
 {
   imports = [ ./hardware-configuration.nix ];
 
   # host
   networking.hostName = "pharika";
 
-  # Optional static ethernet (leave commented unless needed)
+  # Static Ethernet Stuff (not needed? lol)
   # networking.networkmanager.unmanaged = [ "eno2" ];
   # networking.interfaces.eno2.ipv4.addresses = [{
   #   address = "10.0.0.3";
@@ -20,9 +18,7 @@
   # };
   # networking.nameservers = [ "1.1.1.1" "9.9.9.9" ];
 
-  # user (server extras on top of the base alice from common.nix)
-  # SSH is key-only (PasswordAuthentication = false); this key from athreos
-  # is what lets alice log in remotely.
+  # SSH keyFiles
   users.users.alice.openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
 
   # never change

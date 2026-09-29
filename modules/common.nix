@@ -5,16 +5,17 @@
   ...
 }:
 
-# Truly shared configuration — applied to EVERY host (laptops + servers).
-# Anything graphical/desktop-only lives in desktop.nix; server-only in server.nix.
+# Common Modules: 
+#   Every Server should get these
+
 {
-  # Experimental Features (Flakes)
+  # Experimental Features 
   nix.settings.experimental-features = [
     "nix-command"
     "flakes"
   ];
 
-  # Bootloader (all hosts are systemd-boot / EFI)
+  # Bootloader 
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.configurationLimit = 3;
@@ -22,11 +23,12 @@
   # Networking
   networking.networkmanager.enable = true;
 
-  # Tailscale (system daemon; run `sudo tailscale up` once to authenticate)
+  # Tailscale 
   services.tailscale.enable = true;
 
-  # mDNS resolution: every host can resolve *.local (e.g. pharika.local).
-  # Servers additionally *publish* their name — see server.nix.
+  # mDNS local-network resolution:
+  #   NOTE: Servers publish their names (see server.nix)
+
   services.avahi = {
     enable = true;
     nssmdns4 = true;
@@ -47,7 +49,7 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-  # User (base identity — shared everywhere)
+  # We're all just different flavors of alice :3c  
   users.users.alice = {
     isNormalUser = true;
     description = "alice";
@@ -72,10 +74,10 @@
     usbutils
   ];
 
-  # Zsh (enable as system shell; user config owned by home-manager)
+  # Zsh 
   programs.zsh.enable = true;
 
-  # Nix Helper (nh)
+  # Nix Helper 
   programs.nh = {
     enable = true;
     flake = "/home/alice/sutures";

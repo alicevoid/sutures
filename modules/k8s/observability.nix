@@ -1,9 +1,9 @@
 { ... }:
 
 # Observability stack for pharika's single-node k3s cluster: full LGTM.
-#   L(oki)  - logs, collected by Alloy, stored on-box
+#   L(oki)    - logs, collected by Alloy, stored on-box
 #   G(rafana) - single UI (bundled in kube-prometheus-stack)
-#   T(empo) - traces, OTLP receivers on 4317/4318 (apps push directly)
+#   T(empo)   - traces, OTLP receivers on 4317/4318 (apps push directly)
 #   M(etrics) - Prometheus, via kube-prometheus-stack
 #
 # Everything lands in the `monitoring` namespace and is deployed by k3s's
@@ -16,7 +16,7 @@
 # /var/lib/rancher/k3s/storage on the ext4 root).
 #
 # NOTE ON SECRETS: `values` set here land unencrypted in the world-readable
-# nix store, and this is a public repo — so NO secrets go in `values`.
+# nix store, and this is a public repo- so NO secrets go in `values`.
 # Grafana's admin login comes from a k8s Secret named `grafana-admin` created
 # directly on pharika (one-time `kubectl create secret`, see README/memory),
 # so the password lives only in the cluster datastore, never in git or nix.

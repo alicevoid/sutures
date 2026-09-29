@@ -3,7 +3,7 @@
   programs.nixvim.colorschemes.catppuccin.enable = true;
   programs.nixvim.plugins = {
 
-    # Icons (required by many plugins)
+    # Icons 
     web-devicons.enable = true;
 
     # Statusline

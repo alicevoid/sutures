@@ -47,10 +47,7 @@
     };
   };
 
-  # SSH client aliases.
-  # Uses Tailscale MagicDNS names (lowercased tailnet names, NOT LAN IPs), so
-  # nothing here leaks network topology in this public repo. These `Host`
-  # entries also give `ssh <tab>` completion for each machine.
+  # SSH Client Aliases (Tailscale MagicDNS)
   programs.ssh = {
     enable = true;
     matchBlocks = {
@@ -62,7 +59,7 @@
         hostname = "athreos";
         user = "alice";
       };
-      # kunoros not yet on the tailnet — add once it joins.
+      # TODO: put kunoros on tailnet 
     };
   };
 

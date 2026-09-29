@@ -4,10 +4,11 @@
   ...
 }:
 
-# Graphical workstation base — GNOME desktop, audio, printing, screenshots.
-# Imported by laptop.nix. Servers (server.nix) do NOT get this.
+# Desktop Modules:
+#   For computers without touchpads and built-in monitors
+
 {
-  # GNOME
+  # Gnome
   services.xserver.enable = true;
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
@@ -16,7 +17,9 @@
     variant = "";
   };
 
-  # keyd — capslock->escape, and Alt+SysRq for a flameshot screenshot
+  # keyd 
+  #        caps -> escape 
+  #   alt+prtsc -> flameshot
   services.keyd = {
     enable = true;
     keyboards = {
@@ -47,7 +50,7 @@
     pulse.enable = true;
   };
 
-  # Misc desktop
+  # ...Other 
   services.flatpak.enable = true;
   gtk.iconCache.enable = true;
 }

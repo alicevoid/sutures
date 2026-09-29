@@ -1,15 +1,12 @@
 { ... }:
 
-# Memos — tiny self-hosted memo/note stream (https://usememos.com).
-# First "real" workload on pharika's cluster: one container, SQLite on a
-# local-path volume. Reached at http://pharika:5230 over the tailnet.
-#
-# ROUTING NOTE: the Grafana Ingress is host-less and owns "/" on Traefik's
-# :80, and Memos can't run under a subpath — so instead of an Ingress we give
-# Memos a LoadBalancer Service. k3s's built-in servicelb (klipper) binds that
-# port straight onto the host, so http://pharika:5230 hits it directly.
-# (Upgrade path later: give it a real hostname + Ingress once you set up
-# per-service DNS, then drop the open port.)
+# Memos (http://pharika:5230)
+#   ROUTING NOTE: the Grafana Ingress is host-less and owns "/" on Traefik's
+#   :80, and Memos can't run under a subpath — so instead of an Ingress we give
+#   Memos a LoadBalancer Service. k3s's built-in servicelb (klipper) binds that
+#   port straight onto the host, so http://pharika:5230 hits it directly.
+#   (Upgrade path later: give it a real hostname + Ingress once you set up
+#   per-service DNS, then drop the open port.)
 
 let
   ns = "memos";

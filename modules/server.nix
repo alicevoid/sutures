@@ -4,10 +4,12 @@
   ...
 }:
 
-# Server class - headless base. No desktop, no audio.
-# Applied to pharika.
+# Server Modules: 
+#   ALL servers get these 
+#   ...WARNING: this is a BAD IDEA ZONE! brought2u by yours truly
+
 {
-  # SSH (hardened: keys only)
+  # SSH
   services.openssh = {
     enable = true;
     settings = {
@@ -17,11 +19,12 @@
     };
   };
 
-  # Firewall on by default for servers
+  # Firewall
   networking.firewall.enable = true;
 
-  # Advertise this host over mDNS (base avahi is in common.nix) so the
-  # laptops can reach it as <hostname>.local.
+  # mDNS publishing:
+  #   NOTE: This is enabled already (see common.nix)
+
   services.avahi = {
     openFirewall = true;
     publish = {
@@ -30,13 +33,13 @@
     };
   };
 
-  # Console (headless TTY)
+  # Console 
   console = {
     font = "Lat2-Terminus16";
     keyMap = "us";
   };
 
-  # Nix store hygiene — automatic GC + store optimisation
+  # Storage Cleanup
   nix.settings.auto-optimise-store = true;
   nix.gc = {
     automatic = true;
@@ -44,6 +47,6 @@
     options = "--delete-older-than 30d";
   };
 
-  # SSD trim
+  # SSD 
   services.fstrim.enable = true;
 }

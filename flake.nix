@@ -23,10 +23,9 @@
     let
       system = "x86_64-linux";
 
-      # Home-manager wiring, shared by every host (full home everywhere).
       homeManager = {
-        home-manager.useGlobalPkgs = true; # uses system nixpkgs, no duplicate downloads
-        home-manager.useUserPackages = true; # installs HM packages into user profile
+        home-manager.useGlobalPkgs = true; 
+        home-manager.useUserPackages = true;
         home-manager.users.alice = {
           imports = [
             nixvim.homeModules.nixvim
@@ -36,9 +35,6 @@
         home-manager.extraSpecialArgs = { inherit inputs; };
       };
 
-      # mkSystem no longer bakes in any class/desktop assumptions. Each host
-      # declares its class module (laptop.nix / server.nix), any profiles, and
-      # its own host config via `modules`.
       mkSystem =
         modules:
         nixpkgs.lib.nixosSystem {
@@ -71,7 +67,7 @@
 
         pharika = mkSystem [
           ./modules/server.nix
-          ./modules/k8s # k3s cluster + LGTM observability stack
+          ./modules/k8s 
           ./hosts/pharika/configuration.nix
           ./hosts/pharika/hardware-configuration.nix
         ];
