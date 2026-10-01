@@ -61,14 +61,17 @@ in
               access = "proxy";
               url = "http://loki.${ns}.svc:3100";
             }
-            {
-              name = "Tempo";
-              type = "tempo";
-              uid = "tempo";
-              access = "proxy";
-              url = "http://tempo.${ns}.svc:3100";
-              jsonData.tracesToLogsV2.datasourceUid = "loki";
-            }
+
+            # TEMPORARILY DISABLED TEMPO: useless until we actually need traces & hogs RAM lol
+
+            # {
+              # name = "Tempo";
+              # type = "tempo";
+              # uid = "tempo";
+              # access = "proxy";
+              # url = "http://tempo.${ns}.svc:3100";
+              # jsonData.tracesToLogsV2.datasourceUid = "loki";
+            # }
           ];
         };
 
@@ -206,35 +209,38 @@ in
     };
 
     # ---- Traces -----------------------------------------------------------
+
+            # TEMPORARILY DISABLED TEMPO: useless until we actually need traces & hogs RAM lol
+
     # Single-binary Tempo with OTLP receivers. Instrumented apps send spans
     # straight to tempo.${ns}.svc:4317 (gRPC) or :4318 (HTTP).
-    tempo = {
-      repo = "https://grafana.github.io/helm-charts";
-      name = "tempo";
-      version = "1.24.4";
-      hash = "sha256-8fbjGNW8o7UJfLZ2B3eWzfgTW+ssH3HE0UYUzPmwCBs=";
-      targetNamespace = ns;
-      createNamespace = true;
-      values = {
-        tempo = {
-          retention = "168h"; # 7d block retention
-          storage.trace = {
-            backend = "local";
-            local.path = "/var/tempo/traces";
-            wal.path = "/var/tempo/wal";
-          };
-          receivers.otlp.protocols = {
-            grpc.endpoint = "0.0.0.0:4317";
-            http.endpoint = "0.0.0.0:4318";
-          };
-        };
-        persistence = {
-          enabled = true;
-          storageClassName = localPath;
-          size = "10Gi";
-        };
-      };
-    };
+    # tempo = {
+      # repo = "https://grafana.github.io/helm-charts";
+      # name = "tempo";
+      # version = "1.24.4";
+      # hash = "sha256-8fbjGNW8o7UJfLZ2B3eWzfgTW+ssH3HE0UYUzPmwCBs=";
+      # targetNamespace = ns;
+      # createNamespace = true;
+      # values = {
+        # tempo = {
+          # retention = "168h"; # 7d block retention
+          # storage.trace = {
+            # backend = "local";
+            # local.path = "/var/tempo/traces";
+            # wal.path = "/var/tempo/wal";
+          # };
+          # receivers.otlp.protocols = {
+            # grpc.endpoint = "0.0.0.0:4317";
+            # http.endpoint = "0.0.0.0:4318";
+          # };
+        # };
+        # persistence = {
+          # enabled = true;
+          # storageClassName = localPath;
+          # size = "10Gi";
+        # };
+      # };
+    # };
   };
 
   # ---- Ingress: reach Grafana over the tailnet without port-forwarding ----
