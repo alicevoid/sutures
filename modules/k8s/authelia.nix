@@ -177,6 +177,11 @@ in
         template = {
           metadata.labels.app = "authelia";
           spec = {
+            # Kubernetes otherwise injects env vars for every Service in this ns
+            # (AUTHELIA_SERVICE_PORT, AUTHELIA_PORT_80_TCP_*, ...). Authelia reads
+            # ALL `AUTHELIA_*` env vars as config, so those collide with our
+            # server.address and it refuses to start. Turn the injection off.
+            enableServiceLinks = false;
             # Let the process write the PVC regardless of its runtime uid.
             securityContext.fsGroup = 1000;
             containers = [
