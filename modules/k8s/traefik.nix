@@ -1,34 +1,65 @@
 { ... }:
 
-# Traefik TLS — issue a real wildcard *.pvc.tools cert from Let's Encrypt using
-# the DNS-01 challenge against Porkbun. No cert-manager, no extra charts: we just
-# layer a HelmChartConfig over k3s's ALREADY-RUNNING bundled `traefik` HelmChart
-# (in kube-system). IngressRoutes then reference the resolver as
-# `tls.certResolver = le` (see memos.nix / karakeep.nix).
+# =============================================================================
+# traefik.nix — give k3s's built-in Traefik the ability to get real HTTPS certs
+# =============================================================================
 #
-# WHY DNS-01: it proves ownership by writing a TXT record — needs NO inbound
-# ports — so certs issue over the tailnet today, before any public exposure.
+# WHAT THIS DOES
+#   Teaches the Traefik that already ships with k3s how to fetch free Let's
+#   Encrypt certificates for *.pvc.tools, so our apps can be served over HTTPS.
+#   We don't install anything new (no cert-manager) — we just hand Traefik some
+#   extra settings via a "HelmChartConfig", which layers our values on top of
+#   k3s's built-in Traefik without replacing it.
 #
-# BLAST-RADIUS NOTE: this reconfigures the SHARED ingress. If the traefik pod
-# crashloops on a bad value, the Grafana ingress (http://pharika/) blips — but
-# the LoadBalancer apps (memos:5230, karakeep:3000) DON'T go through Traefik, so
-# tailnet access to those is unaffected. After a rebuild, check:
-#   kubectl -n kube-system rollout status deploy/traefik
+# HOW THE CERT IS PROVED
+#   Let's Encrypt needs proof you own pvc.tools. We use the "DNS-01" method:
+#   Traefik asks Porkbun (our DNS host) to create a temporary TXT record, and
+#   Let's Encrypt checks for it. This needs NO open/inbound ports, so it works
+#   right now over the tailnet, before anything is exposed to the internet.
 #
-# SECRET (out of repo, like grafana-admin / karakeep-secrets): Porkbun API creds
-# live in a k8s Secret in kube-system. Create ONCE on pharika BEFORE rebuilding:
-#   kubectl -n kube-system create secret generic traefik-porkbun \
-#     --from-literal=api-key='pk1_...' \
-#     --from-literal=secret-api-key='sk1_...'
-# Also toggle API ACCESS = ON for pvc.tools in Porkbun's domain settings, or the
-# API rejects the calls even with valid keys.
+# NOTHING HERE IS DISABLED
+#   Every line below is active config — there are no commented-out lines you need
+#   to turn on. The ONLY thing you'll ever toggle is the single STAGING line near
+#   the bottom (see "GOING TO PRODUCTION"), and for now it should stay as-is.
 #
-# STAGING FIRST: the caserver line below points at Let's Encrypt STAGING to avoid
-# burning prod rate limits while iterating (browsers will show an "untrusted"
-# warning — that's expected and means it's WORKING). Once a staging cert issues
-# cleanly, DELETE the caserver line to switch to prod, then force a re-issue:
-#   kubectl -n kube-system exec deploy/traefik -- rm -f /data/acme.json  # or:
-#   kubectl -n kube-system rollout restart deploy/traefik
+# -----------------------------------------------------------------------------
+# BEFORE YOU REBUILD — one-time setup (both required)
+# -----------------------------------------------------------------------------
+#   1. In Porkbun: turn ON "API Access" for the pvc.tools domain, and create an
+#      API key + secret key. (Without the per-domain toggle, the API refuses the
+#      calls even with valid keys.)
+#
+#   2. Put those keys into the cluster as a Secret (kept out of this public repo,
+#      exactly like grafana-admin / karakeep-secrets). Run on pharika:
+#
+#        kubectl -n kube-system create secret generic traefik-porkbun \
+#          --from-literal=api-key='pk1_...' \
+#          --from-literal=secret-api-key='sk1_...'
+#
+# -----------------------------------------------------------------------------
+# AFTER YOU REBUILD — quick sanity check
+# -----------------------------------------------------------------------------
+#   Changing Traefik restarts it. Traefik is the SHARED front door, so if a bad
+#   value made it crashloop, only http://pharika/ (Grafana) would blip — the
+#   tailnet apps on their own ports (memos:5230, karakeep:3000) don't go through
+#   Traefik and stay up. Confirm Traefik came back cleanly:
+#
+#        kubectl -n kube-system rollout status deploy/traefik
+#        kubectl -n kube-system logs deploy/traefik | grep -iE 'acme|porkbun|error'
+#
+# -----------------------------------------------------------------------------
+# GOING TO PRODUCTION (do this LATER, not now)
+# -----------------------------------------------------------------------------
+#   We start against Let's Encrypt's STAGING server so mistakes don't count
+#   against the real rate limits. Staging certs are untrusted, so browsers show a
+#   warning — that warning is EXPECTED and actually means it's working.
+#
+#   Once a staging cert issues cleanly, switch to real certs by DELETING the one
+#   line marked "STAGING" at the very bottom, then force Traefik to re-request:
+#
+#        kubectl -n kube-system exec deploy/traefik -- rm -f /data/acme.json
+#        kubectl -n kube-system rollout restart deploy/traefik
+# =============================================================================
 
 {
   services.k3s.manifests.traefik-config.content = {
@@ -38,9 +69,13 @@
       name = "traefik";
       namespace = "kube-system";
     };
-    # valuesContent is a raw YAML string merged into the traefik chart's values.
+
+    # Everything inside valuesContent is plain YAML that gets merged into the
+    # Traefik Helm chart's settings.
     spec.valuesContent = ''
-      # Porkbun API creds for lego's DNS-01 solver, from the out-of-band Secret.
+      # --- Porkbun credentials -------------------------------------------------
+      # Hand Traefik the Porkbun API keys (read from the Secret you created
+      # above) so it can create the DNS TXT records during the cert challenge.
       env:
         - name: PORKBUN_API_KEY
           valueFrom:
@@ -52,20 +87,23 @@
             secretKeyRef:
               name: traefik-porkbun
               key: secret-api-key
-        # Porkbun's DNS propagation is sometimes slow; give lego room before it
-        # polls for the TXT record (seconds).
+        # Porkbun can be slow to publish the TXT record; wait up to 600s for it
+        # to appear before giving up on the challenge.
         - name: PORKBUN_PROPAGATION_TIMEOUT
           value: "600"
 
-      # Persist acme.json so issued certs survive Traefik restarts (prevents
-      # re-issuing and hitting rate limits). Tiny PVC on the local-path class.
+      # --- Keep certs across restarts ------------------------------------------
+      # Store the issued certs (acme.json) on a small persistent disk so Traefik
+      # reuses them after a restart instead of asking Let's Encrypt every time
+      # (which would quickly hit rate limits).
       persistence:
         enabled: true
         storageClass: local-path
         size: 128Mi
         path: /data
 
-      # acme.json MUST be chmod 600 or Traefik refuses to load it.
+      # Let's Encrypt requires acme.json to be private (chmod 600). This tiny
+      # startup container sets that permission before Traefik reads the file.
       deployment:
         initContainers:
           - name: volume-permissions
@@ -78,16 +116,20 @@
         fsGroup: 65532
         fsGroupChangePolicy: "OnRootMismatch"
 
-      # The ACME resolver named 'le' (referenced by IngressRoutes).
+      # --- The certificate resolver named "le" ---------------------------------
+      # This defines the resolver our apps point at with `tls.certResolver = le`
+      # (see the IngressRoutes in memos.nix / karakeep.nix).
       additionalArguments:
-        # TODO: set an email you're OK having in a PUBLIC repo (gets LE expiry
-        # notices). Consider a dedicated alias rather than your primary address.
-        - "--certificatesresolvers.le.acme.email="admin@pvc.tools"
+        # Contact address for the Let's Encrypt account (gets cert-expiry
+        # warnings). Uses the pvc.tools forwarding alias, not a personal address.
+        - "--certificatesresolvers.le.acme.email=admin@pvc.tools"
+        # Where issued certs are saved (on the persistent disk above).
         - "--certificatesresolvers.le.acme.storage=/data/acme.json"
+        # Prove ownership via a Porkbun DNS record (the DNS-01 method).
         - "--certificatesresolvers.le.acme.dnschallenge.provider=porkbun"
-        # Resolve the TXT check against public DNS, not the cluster's resolver.
+        # Check for the TXT record against public DNS, not the cluster's resolver.
         - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-        # STAGING — DELETE this one line to switch to production once it works:
+        # STAGING (keep for now; delete this ONE line to switch to real certs):
         - "--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
     '';
   };
