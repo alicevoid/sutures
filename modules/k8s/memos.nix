@@ -104,6 +104,12 @@ in
         namespace = ns;
       };
       spec = {
+        # Kept as LoadBalancer for now so http://pharika:5230 (tailnet) still
+        # works as a fallback while we try out the subdomain path below. A
+        # LoadBalancer Service still has a ClusterIP underneath, so the
+        # IngressRoute can route to it unchanged. HARDENING LATER: flip this to
+        # ClusterIP and drop `port` from the firewall once subdomains + auth are
+        # proven.
         type = "LoadBalancer";
         selector.app = "memos";
         ports = [
@@ -112,6 +118,44 @@ in
             targetPort = port;
           }
         ];
+      };
+    }
+
+    # Subdomain path: https://memos.pvc.tools via Traefik + the `le` wildcard
+    # cert (see traefik.nix). Runs in parallel with the LoadBalancer above.
+    # No Authelia yet — that middleware gets added in the auth increment.
+    {
+      apiVersion = "traefik.io/v1alpha1";
+      kind = "IngressRoute";
+      metadata = {
+        name = "memos";
+        namespace = ns;
+      };
+      spec = {
+        entryPoints = [ "websecure" ]; # :443 only — avoids the host-less Grafana ingress on :80
+        routes = [
+          {
+            match = "Host(`memos.pvc.tools`)";
+            kind = "Rule";
+            services = [
+              {
+                name = "memos";
+                port = port;
+              }
+            ];
+          }
+        ];
+        tls = {
+          certResolver = "le";
+          # Request ONE wildcard cert and reuse it for every subdomain, instead
+          # of a separate cert per host (keeps us well under rate limits).
+          domains = [
+            {
+              main = "pvc.tools";
+              sans = [ "*.pvc.tools" ];
+            }
+          ];
+        };
       };
     }
   ];

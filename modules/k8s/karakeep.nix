@@ -341,6 +341,11 @@ in
         namespace = ns;
       };
       spec = {
+        # Kept as LoadBalancer for now so http://pharika:3000 (tailnet) still
+        # works as a fallback while we try out the subdomain path below. The
+        # IngressRoute routes to this same Service via its ClusterIP. HARDENING
+        # LATER: flip to ClusterIP, drop `webPort` from the firewall, and set
+        # NEXTAUTH_URL to https://karakeep.pvc.tools once auth is in front.
         type = "LoadBalancer";
         selector.app = "karakeep";
         ports = [
@@ -349,6 +354,48 @@ in
             targetPort = webPort;
           }
         ];
+      };
+    }
+
+    # Subdomain path: https://karakeep.pvc.tools via Traefik + the `le` wildcard
+    # cert (see traefik.nix). Runs in parallel with the LoadBalancer above.
+    #
+    # NOTE: Karakeep auth (NextAuth) bakes the origin into redirects via
+    # NEXTAUTH_URL, still set to http://pharika:3000 above. So logging in via the
+    # LoadBalancer works, but logging in via https://karakeep.pvc.tools may
+    # redirect-loop until NEXTAUTH_URL is switched. For now use the subdomain to
+    # verify ROUTING + TLS; fix NEXTAUTH_URL when we cut over to the subdomain for
+    # real (in the hardening/auth increment). No Authelia middleware yet.
+    {
+      apiVersion = "traefik.io/v1alpha1";
+      kind = "IngressRoute";
+      metadata = {
+        name = "karakeep";
+        namespace = ns;
+      };
+      spec = {
+        entryPoints = [ "websecure" ]; # :443 only
+        routes = [
+          {
+            match = "Host(`karakeep.pvc.tools`)";
+            kind = "Rule";
+            services = [
+              {
+                name = "karakeep";
+                port = webPort;
+              }
+            ];
+          }
+        ];
+        tls = {
+          certResolver = "le";
+          domains = [
+            {
+              main = "pvc.tools";
+              sans = [ "*.pvc.tools" ];
+            }
+          ];
+        };
       };
     }
   ];
