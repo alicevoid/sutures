@@ -82,7 +82,7 @@
       additionalArguments:
         # TODO: set an email you're OK having in a PUBLIC repo (gets LE expiry
         # notices). Consider a dedicated alias rather than your primary address.
-        - "--certificatesresolvers.le.acme.email=CHANGEME@example.com"
+        - "--certificatesresolvers.le.acme.email="admin@pvc.tools"
         - "--certificatesresolvers.le.acme.storage=/data/acme.json"
         - "--certificatesresolvers.le.acme.dnschallenge.provider=porkbun"
         # Resolve the TXT check against public DNS, not the cluster's resolver.
