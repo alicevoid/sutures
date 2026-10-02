@@ -358,14 +358,31 @@ in
     }
 
     # Subdomain path: https://karakeep.pvc.tools via Traefik + the `le` wildcard
-    # cert (see traefik.nix). Runs in parallel with the LoadBalancer above.
+    # cert (see traefik.nix), gated by Authelia (see authelia.nix). Runs in
+    # parallel with the LoadBalancer above (tailnet pharika:3000 stays un-gated).
     #
-    # NOTE: Karakeep auth (NextAuth) bakes the origin into redirects via
-    # NEXTAUTH_URL, still set to http://pharika:3000 above. So logging in via the
-    # LoadBalancer works, but logging in via https://karakeep.pvc.tools may
-    # redirect-loop until NEXTAUTH_URL is switched. For now use the subdomain to
-    # verify ROUTING + TLS; fix NEXTAUTH_URL when we cut over to the subdomain for
-    # real (in the hardening/auth increment). No Authelia middleware yet.
+    # NOTE: Karakeep has its OWN login (NextAuth) behind Authelia's — so via the
+    # subdomain you'll hit Authelia first, then Karakeep's login (expected). Also
+    # NEXTAUTH_URL is still http://pharika:3000 above, so Karakeep's own login via
+    # the subdomain may redirect-loop until that's switched to
+    # https://karakeep.pvc.tools (do that in the hardening cutover).
+
+    # ForwardAuth middleware: Traefik asks Authelia to authorize each request.
+    # Defined in THIS namespace so no cross-namespace Traefik permission is needed.
+    {
+      apiVersion = "traefik.io/v1alpha1";
+      kind = "Middleware";
+      metadata = {
+        name = "authelia";
+        namespace = ns;
+      };
+      spec.forwardAuth = {
+        address = "http://authelia.authelia.svc.cluster.local/api/authz/forward-auth";
+        trustForwardHeader = true;
+        authResponseHeaders = [ "Remote-User" "Remote-Groups" "Remote-Email" "Remote-Name" ];
+      };
+    }
+
     {
       apiVersion = "traefik.io/v1alpha1";
       kind = "IngressRoute";
@@ -379,6 +396,7 @@ in
           {
             match = "Host(`karakeep.pvc.tools`)";
             kind = "Rule";
+            middlewares = [ { name = "authelia"; namespace = ns; } ];
             services = [
               {
                 name = "karakeep";

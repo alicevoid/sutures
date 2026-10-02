@@ -121,9 +121,27 @@ in
       };
     }
 
-    # Subdomain path: https://memos.pvc.tools via Traefik + the `le` wildcard
-    # cert (see traefik.nix). Runs in parallel with the LoadBalancer above.
-    # No Authelia yet — that middleware gets added in the auth increment.
+    # Subdomain path: https://memos.pvc.tools via Traefik + the `le` wildcard cert
+    # (see traefik.nix), gated by Authelia (see authelia.nix). Runs in parallel
+    # with the LoadBalancer above (tailnet pharika:5230 stays open, un-gated).
+
+    # ForwardAuth middleware: Traefik asks Authelia to authorize each request.
+    # Defined in THIS namespace so no cross-namespace Traefik permission is needed
+    # — the address is just a cluster-DNS URL to the Authelia service.
+    {
+      apiVersion = "traefik.io/v1alpha1";
+      kind = "Middleware";
+      metadata = {
+        name = "authelia";
+        namespace = ns;
+      };
+      spec.forwardAuth = {
+        address = "http://authelia.authelia.svc.cluster.local/api/authz/forward-auth";
+        trustForwardHeader = true;
+        authResponseHeaders = [ "Remote-User" "Remote-Groups" "Remote-Email" "Remote-Name" ];
+      };
+    }
+
     {
       apiVersion = "traefik.io/v1alpha1";
       kind = "IngressRoute";
@@ -137,6 +155,7 @@ in
           {
             match = "Host(`memos.pvc.tools`)";
             kind = "Rule";
+            middlewares = [ { name = "authelia"; namespace = ns; } ];
             services = [
               {
                 name = "memos";
