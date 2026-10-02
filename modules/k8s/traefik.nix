@@ -136,8 +136,6 @@
         - "--certificatesresolvers.le.acme.dnschallenge.provider=porkbun"
         # Check for the TXT record against public DNS, not the cluster's resolver.
         - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
-        # STAGING (keep for now; delete this ONE line to switch to real certs):
-        - "--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
     '';
   };
 }
