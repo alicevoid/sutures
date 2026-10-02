@@ -91,6 +91,13 @@
         # to appear before giving up on the challenge.
         - name: PORKBUN_PROPAGATION_TIMEOUT
           value: "600"
+        # Our zone has a wildcard parking record (*.pvc.tools CNAME pixie.porkbun.com).
+        # Since lego 4.9, lego FOLLOWS that CNAME when placing the _acme-challenge
+        # record and tries to create it under porkbun.com — which we don't own — so
+        # Porkbun rejects it with a 400 "Invalid domain". Disabling CNAME-following
+        # makes lego write the TXT in our own pvc.tools zone where it belongs.
+        - name: LEGO_DISABLE_CNAME_SUPPORT
+          value: "true"
 
       # --- Keep certs across restarts ------------------------------------------
       # Store the issued certs (acme.json) on a small persistent disk so Traefik
