@@ -20,7 +20,7 @@
   };
 
   # Firewall
-  networking.firewall.enable = true;
+  networking.firewall.enable = false;
 
   # mDNS publishing:
   #   NOTE: This is enabled already (see common.nix)
