@@ -136,6 +136,9 @@
         - "--certificatesresolvers.le.acme.dnschallenge.provider=porkbun"
         # Check for the TXT record against public DNS, not the cluster's resolver.
         - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
+        - "--api"
+        - "--api.dashboard=true"
+        - "--api.insecure=true"
     '';
   };
 }
