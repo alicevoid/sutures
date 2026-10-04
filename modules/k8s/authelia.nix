@@ -126,26 +126,35 @@ in
                 - karakeep.pvc.tools
                 - grafana.pvc.tools
                 - traefik.pvc.tools
-              # one_factor = password only (lowest friction to get going).
-              # Bump to two_factor once everyone has enrolled a TOTP app.
-              # (Access tiers — e.g. grafana/traefik admins-only — are yours to
-              # refine in the Authelia planning pass; for now friends+admins.)
-              policy: one_factor
+              # two_factor = password + TOTP. This is what stops an unknown device
+              # with only a leaked/guessed password: it can't pass without the
+              # authenticator code. Users enrol a TOTP app on first login.
+              # (All four apps share this tier: friends + admins.)
+              policy: two_factor
               subject:
                 - group:friends
                 - group:admins
 
-        # Session cookie shared across *.pvc.tools -> single sign-on.
+        # Session cookie shared across *.pvc.tools -> single sign-on. Tuned for
+        # "quiet": a remembered device stays signed in for ~3 months, so you log
+        # in (with TOTP) roughly once a quarter per device.
         session:
+          # Keep sessions in Redis (see the redis Deployment below) instead of
+          # in-memory, so an Authelia restart/upgrade does NOT log everyone out —
+          # the #1 source of silent friction before. Redis is cluster-internal
+          # (ClusterIP, never firewalled out), so no password is configured.
+          redis:
+            host: redis.authelia.svc.cluster.local
+            port: 6379
           cookies:
             - domain: pvc.tools
               authelia_url: https://auth.pvc.tools
               default_redirection_url: https://memos.pvc.tools
               name: authelia_session
               same_site: lax
-              inactivity: 1h
-              expiration: 8h
-              remember_me: 1M
+              inactivity: 7d       # session dies after a week of no use
+              expiration: 1d       # lifetime of a NON-remembered cookie
+              remember_me: 3M      # "remember me" box ticked -> 3 months
 
         # Brute-force protection: lock an account briefly after repeated failures.
         regulation:
@@ -271,6 +280,92 @@ in
           {
             port = 80;
             targetPort = 9091;
+          }
+        ];
+      };
+    }
+
+    # 5b) Redis — Authelia's session store -------------------------------------
+    # Sessions used to live in Authelia's memory, so every restart logged everyone
+    # out. Redis makes them survive restarts/upgrades. append-only persistence +
+    # a small PVC means sessions also survive Redis itself being rescheduled.
+    # Cluster-internal only (ClusterIP), so it runs without a password.
+    {
+      apiVersion = "v1";
+      kind = "PersistentVolumeClaim";
+      metadata = {
+        name = "redis-data";
+        namespace = ns;
+      };
+      spec = {
+        accessModes = [ "ReadWriteOnce" ];
+        storageClassName = "local-path";
+        resources.requests.storage = "1Gi";
+      };
+    }
+    {
+      apiVersion = "apps/v1";
+      kind = "Deployment";
+      metadata = {
+        name = "redis";
+        namespace = ns;
+      };
+      spec = {
+        replicas = 1;
+        strategy.type = "Recreate"; # RWO volume
+        selector.matchLabels.app = "redis";
+        template = {
+          metadata.labels.app = "redis";
+          spec = {
+            securityContext.fsGroup = 999; # redis uid in the alpine image
+            containers = [
+              {
+                name = "redis";
+                image = "redis:7-alpine";
+                args = [ "--appendonly" "yes" ];
+                ports = [ { containerPort = 6379; } ];
+                volumeMounts = [
+                  {
+                    name = "data";
+                    mountPath = "/data";
+                  }
+                ];
+                resources = {
+                  requests = {
+                    cpu = "25m";
+                    memory = "32Mi";
+                  };
+                  limits = {
+                    cpu = "200m";
+                    memory = "128Mi";
+                  };
+                };
+              }
+            ];
+            volumes = [
+              {
+                name = "data";
+                persistentVolumeClaim.claimName = "redis-data";
+              }
+            ];
+          };
+        };
+      };
+    }
+    {
+      apiVersion = "v1";
+      kind = "Service";
+      metadata = {
+        name = "redis";
+        namespace = ns;
+      };
+      spec = {
+        type = "ClusterIP";
+        selector.app = "redis";
+        ports = [
+          {
+            port = 6379;
+            targetPort = 6379;
           }
         ];
       };
