@@ -138,7 +138,11 @@
         - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
         - "--api"
         - "--api.dashboard=true"
-        - "--api.insecure=true"
+        # insecure=false: the dashboard is NOT served unauthenticated on Traefik's
+        # internal entrypoint. The only way in is the Authelia-gated IngressRoute
+        # (https://traefik.pvc.tools -> api@internal); the dashboard itself stays
+        # enabled via --api.dashboard above.
+        - "--api.insecure=false"
         # Redirect ALL plain-HTTP (:80) to HTTPS (:443). Nothing should ever be
         # served on :80 — this both upgrades bare `http://x.pvc.tools` typed in a
         # browser AND removes the footgun where a host-less :80 route could serve
