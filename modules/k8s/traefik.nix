@@ -139,6 +139,13 @@
         - "--api"
         - "--api.dashboard=true"
         - "--api.insecure=true"
+        # Redirect ALL plain-HTTP (:80) to HTTPS (:443). Nothing should ever be
+        # served on :80 — this both upgrades bare `http://x.pvc.tools` typed in a
+        # browser AND removes the footgun where a host-less :80 route could serve
+        # one app for every hostname. We use DNS-01 for certs, so :80 is free.
+        - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+        - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+        - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
     '';
   };
 

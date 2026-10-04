@@ -252,44 +252,16 @@ in
     # };
   };
 
-  # ---- Ingress: reach Grafana over the tailnet without port-forwarding ----
-  # k3s bundles Traefik as its ingress controller. This host-less Ingress
-  # routes all HTTP :80 traffic to Grafana, so any name that resolves to
-  # pharika works: http://pharika/ (Tailscale MagicDNS) or pharika.local.
-  # (Plain HTTP is fine here — Tailscale already encrypts the transport.)
-  services.k3s.manifests.grafana-ingress.content = {
-    apiVersion = "networking.k8s.io/v1";
-    kind = "Ingress";
-    metadata = {
-      name = "grafana";
-      namespace = ns;
-      annotations."traefik.ingress.kubernetes.io/router.entrypoints" = "web";
-    };
-    spec = {
-      ingressClassName = "traefik";
-      rules = [
-        {
-          http.paths = [
-            {
-              path = "/";
-              pathType = "Prefix";
-              backend.service = {
-                name = "kube-prometheus-stack-grafana";
-                port.number = 80;
-              };
-            }
-          ];
-        }
-      ];
-    };
-  };
-
-  # ---- Public subdomain: https://grafana.pvc.tools via Traefik + Authelia ----
+  # ---- Grafana: https://grafana.pvc.tools via Traefik + Authelia ------------
   # Host-based IngressRoute on :443 with the `le` wildcard cert, gated by the
   # Authelia ForwardAuth middleware (defined here in the monitoring namespace —
-  # same per-namespace pattern as memos/karakeep). Runs alongside the host-less
-  # http://pharika/ ingress above (kept as an un-gated tailnet fallback; retire
-  # it later if you want subdomain-only).
+  # same per-namespace pattern as memos/karakeep).
+  #
+  # NOTE: this REPLACED an older host-less Ingress (HOSTS=`*`) that routed ALL
+  # port-80 traffic to Grafana — which meant any `http://<anything>.pvc.tools`
+  # served the Grafana login (it hijacked auth.pvc.tools etc.). That's gone; the
+  # web (:80) entrypoint now just redirects to :443 (see traefik.nix). Reach
+  # Grafana only at https://grafana.pvc.tools now.
   services.k3s.manifests.grafana-route.content = [
     {
       apiVersion = "traefik.io/v1alpha1";
