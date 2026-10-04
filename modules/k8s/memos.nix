@@ -150,12 +150,12 @@ in
         namespace = ns;
       };
       spec = {
-        entryPoints = [ "websecure" "web" ]; # :443 only — avoids the host-less Grafana ingress on :80
+        entryPoints = [ "websecure" ]; # :443 only — avoids the host-less Grafana ingress on :80
         routes = [
           {
             match = "Host(`memos.pvc.tools`)";
             kind = "Rule";
-            #middlewares = [ { name = "authelia"; namespace = ns; } ];
+            middlewares = [ { name = "authelia"; namespace = ns; } ];
             services = [
               {
                 name = "memos";
