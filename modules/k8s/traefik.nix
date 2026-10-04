@@ -141,4 +141,62 @@
         - "--api.insecure=true"
     '';
   };
+
+  # ===========================================================================
+  # Traefik dashboard — https://traefik.pvc.tools (gated by Authelia)
+  # ===========================================================================
+  # The bundled Traefik already runs with --api.dashboard=true (above), so the
+  # API + dashboard are live on the internal `api@internal` service. We just
+  # expose it on our own hostname: an IngressRoute on :443 (websecure) with the
+  # `le` wildcard cert, behind the Authelia ForwardAuth middleware (defined here
+  # in kube-system, same per-namespace pattern as the apps). Reach it at
+  # https://traefik.pvc.tools/dashboard/ once logged in.
+  services.k3s.manifests.traefik-dashboard.content = [
+    {
+      apiVersion = "traefik.io/v1alpha1";
+      kind = "Middleware";
+      metadata = {
+        name = "authelia";
+        namespace = "kube-system";
+      };
+      spec.forwardAuth = {
+        address = "http://authelia.authelia.svc.cluster.local/api/authz/forward-auth";
+        trustForwardHeader = true;
+        authResponseHeaders = [ "Remote-User" "Remote-Groups" "Remote-Email" "Remote-Name" ];
+      };
+    }
+    {
+      apiVersion = "traefik.io/v1alpha1";
+      kind = "IngressRoute";
+      metadata = {
+        name = "traefik-dashboard";
+        namespace = "kube-system";
+      };
+      spec = {
+        entryPoints = [ "websecure" ];
+        routes = [
+          {
+            match = "Host(`traefik.pvc.tools`)";
+            kind = "Rule";
+            middlewares = [ { name = "authelia"; namespace = "kube-system"; } ];
+            services = [
+              {
+                name = "api@internal";
+                kind = "TraefikService";
+              }
+            ];
+          }
+        ];
+        tls = {
+          certResolver = "le";
+          domains = [
+            {
+              main = "pvc.tools";
+              sans = [ "*.pvc.tools" ];
+            }
+          ];
+        };
+      };
+    }
+  ];
 }

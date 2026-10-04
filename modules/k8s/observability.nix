@@ -47,6 +47,15 @@ in
             userKey = "admin-user";
             passwordKey = "admin-password";
           };
+          # Serve under the public hostname so login POSTs / redirects use the
+          # right origin when reached via https://grafana.pvc.tools (through
+          # Traefik + Authelia). Without this Grafana rejects cross-host logins
+          # with "origin not allowed". (http://pharika/ still serves the UI, but
+          # log in via the subdomain from now on.)
+          env = {
+            GF_SERVER_ROOT_URL = "https://grafana.pvc.tools";
+            GF_SERVER_DOMAIN = "grafana.pvc.tools";
+          };
           persistence = {
             enabled = true;
             storageClassName = localPath;
@@ -274,4 +283,59 @@ in
       ];
     };
   };
+
+  # ---- Public subdomain: https://grafana.pvc.tools via Traefik + Authelia ----
+  # Host-based IngressRoute on :443 with the `le` wildcard cert, gated by the
+  # Authelia ForwardAuth middleware (defined here in the monitoring namespace —
+  # same per-namespace pattern as memos/karakeep). Runs alongside the host-less
+  # http://pharika/ ingress above (kept as an un-gated tailnet fallback; retire
+  # it later if you want subdomain-only).
+  services.k3s.manifests.grafana-route.content = [
+    {
+      apiVersion = "traefik.io/v1alpha1";
+      kind = "Middleware";
+      metadata = {
+        name = "authelia";
+        namespace = ns;
+      };
+      spec.forwardAuth = {
+        address = "http://authelia.authelia.svc.cluster.local/api/authz/forward-auth";
+        trustForwardHeader = true;
+        authResponseHeaders = [ "Remote-User" "Remote-Groups" "Remote-Email" "Remote-Name" ];
+      };
+    }
+    {
+      apiVersion = "traefik.io/v1alpha1";
+      kind = "IngressRoute";
+      metadata = {
+        name = "grafana";
+        namespace = ns;
+      };
+      spec = {
+        entryPoints = [ "websecure" ];
+        routes = [
+          {
+            match = "Host(`grafana.pvc.tools`)";
+            kind = "Rule";
+            middlewares = [ { name = "authelia"; namespace = ns; } ];
+            services = [
+              {
+                name = "kube-prometheus-stack-grafana";
+                port = 80;
+              }
+            ];
+          }
+        ];
+        tls = {
+          certResolver = "le";
+          domains = [
+            {
+              main = "pvc.tools";
+              sans = [ "*.pvc.tools" ];
+            }
+          ];
+        };
+      };
+    }
+  ];
 }

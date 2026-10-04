@@ -262,10 +262,11 @@ in
                     value = "/data"; # SQLite DB + assets live here
                   }
                   {
-                    # The address you reach the app at; used for auth callbacks.
-                    # Update this if/when it gets a real hostname.
+                    # Public hostname the app is reached at; used for NextAuth
+                    # callbacks. Must match the subdomain or Karakeep's own login
+                    # redirect-loops when accessed via https://karakeep.pvc.tools.
                     name = "NEXTAUTH_URL";
-                    value = "http://pharika:3000";
+                    value = "https://karakeep.pvc.tools";
                   }
                   {
                     name = "NEXTAUTH_SECRET";

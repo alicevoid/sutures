@@ -124,8 +124,12 @@ in
             - domain:
                 - memos.pvc.tools
                 - karakeep.pvc.tools
+                - grafana.pvc.tools
+                - traefik.pvc.tools
               # one_factor = password only (lowest friction to get going).
               # Bump to two_factor once everyone has enrolled a TOTP app.
+              # (Access tiers — e.g. grafana/traefik admins-only — are yours to
+              # refine in the Authelia planning pass; for now friends+admins.)
               policy: one_factor
               subject:
                 - group:friends

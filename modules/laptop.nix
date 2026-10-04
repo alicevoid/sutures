@@ -22,6 +22,8 @@
     "auth.pvc.tools"
     "memos.pvc.tools"
     "karakeep.pvc.tools"
+    "grafana.pvc.tools"
+    "traefik.pvc.tools"
   ];
 
   # TODO:
