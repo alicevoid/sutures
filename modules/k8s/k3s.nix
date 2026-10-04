@@ -37,4 +37,30 @@
 
   # So standalone kubectl/k9s/helm find the cluster automatically.
   environment.variables.KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
+
+  # In-cluster split-horizon DNS (the third horizon, after laptop /etc/hosts and
+  # the LAN dnsmasq). Pods must resolve *.pvc.tools to pharika's LAN IP, NOT the
+  # public WAN IP — otherwise server-side calls between apps NAT-hairpin-fail from
+  # inside. Concretely: OIDC back-channel, e.g. Grafana's pod POSTing to
+  # https://auth.pvc.tools/api/oidc/token, times out against the WAN IP.
+  #   k3s imports any `*.server` key in the `coredns-custom` ConfigMap as an extra
+  #   CoreDNS server block. 10.0.0.141 = pharika eno2, where Traefik serves :443
+  #   with the valid wildcard cert (same target the laptop pins + LAN dnsmasq use).
+  services.k3s.manifests.coredns-custom.content = {
+    apiVersion = "v1";
+    kind = "ConfigMap";
+    metadata = {
+      name = "coredns-custom";
+      namespace = "kube-system";
+    };
+    data."pvc-tools.server" = ''
+      pvc.tools:53 {
+        hosts {
+          10.0.0.141 auth.pvc.tools memos.pvc.tools karakeep.pvc.tools grafana.pvc.tools traefik.pvc.tools
+          fallthrough
+        }
+        forward . /etc/resolv.conf
+      }
+    '';
+  };
 }
