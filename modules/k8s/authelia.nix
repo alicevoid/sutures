@@ -201,7 +201,18 @@ in
               {
                 name = "authelia";
                 inherit image;
-                args = [ "--config" "/config/configuration.yml" ];
+                # Base (non-secret) config from the ConfigMap, PLUS the OIDC block
+                # — hmac secret, JWKS private key, and client definitions — from an
+                # out-of-repo file inside the authelia-secrets Secret. Authelia merges
+                # multiple --config files, so no OIDC secret ever touches this public
+                # repo. ⚠️ /secrets/oidc.yml MUST exist (add it to authelia-secrets)
+                # BEFORE this rebuild, or Authelia won't start.
+                args = [
+                  "--config"
+                  "/config/configuration.yml"
+                  "--config"
+                  "/secrets/oidc.yml"
+                ];
                 env = [
                   # Secrets pulled from files (Authelia strips trailing newline).
                   {

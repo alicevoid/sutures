@@ -275,6 +275,38 @@ in
                       key = "nextauth-secret";
                     };
                   }
+                  # --- OIDC SSO via Authelia (single sign-on) --------------------
+                  # Karakeep delegates login to Authelia so there's no separate
+                  # Karakeep login. QUIRK: Karakeep doesn't fetch the userinfo email
+                  # itself, so Authelia must attach a claims_policy to this client
+                  # putting `email` in the id_token (see the oidc.yml template). The
+                  # client secret comes from the karakeep-secrets Secret. Karakeep's
+                  # own email/password login stays on as a fallback until Phase 3
+                  # (then add DISABLE_PASSWORD_AUTH=true).
+                  {
+                    name = "OAUTH_WELLKNOWN_URL";
+                    value = "https://auth.pvc.tools/.well-known/openid-configuration";
+                  }
+                  {
+                    name = "OAUTH_CLIENT_ID";
+                    value = "karakeep";
+                  }
+                  {
+                    name = "OAUTH_CLIENT_SECRET";
+                    valueFrom.secretKeyRef = {
+                      name = secretName;
+                      key = "oauth-client-secret";
+                    };
+                  }
+                  {
+                    name = "OAUTH_PROVIDER_NAME";
+                    value = "Authelia";
+                  }
+                  # Link the Authelia identity to the existing local account by email.
+                  {
+                    name = "OAUTH_ALLOW_DANGEROUS_EMAIL_ACCOUNT_LINKING";
+                    value = "true";
+                  }
                   {
                     name = "MEILI_ADDR";
                     value = "http://meilisearch:7700";

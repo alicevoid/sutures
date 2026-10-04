@@ -55,6 +55,34 @@ in
           env = {
             GF_SERVER_ROOT_URL = "https://grafana.pvc.tools";
             GF_SERVER_DOMAIN = "grafana.pvc.tools";
+
+            # --- OIDC SSO via Authelia (generic_oauth) ---------------------------
+            # One login: Authelia is the identity provider, Grafana delegates to it.
+            # Non-secret settings here; the client SECRET comes from the grafana-oauth
+            # k8s Secret via envValueFrom below (never in this public repo). Grafana's
+            # own admin login (grafana-admin Secret) stays as a break-glass fallback.
+            GF_AUTH_GENERIC_OAUTH_ENABLED = "true";
+            GF_AUTH_GENERIC_OAUTH_NAME = "Authelia";
+            GF_AUTH_GENERIC_OAUTH_CLIENT_ID = "grafana";
+            GF_AUTH_GENERIC_OAUTH_SCOPES = "openid profile email groups";
+            GF_AUTH_GENERIC_OAUTH_AUTH_URL = "https://auth.pvc.tools/api/oidc/authorization";
+            GF_AUTH_GENERIC_OAUTH_TOKEN_URL = "https://auth.pvc.tools/api/oidc/token";
+            GF_AUTH_GENERIC_OAUTH_API_URL = "https://auth.pvc.tools/api/oidc/userinfo";
+            GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH = "preferred_username";
+            GF_AUTH_GENERIC_OAUTH_GROUPS_ATTRIBUTE_PATH = "groups";
+            GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH = "name";
+            GF_AUTH_GENERIC_OAUTH_USE_PKCE = "true";
+            GF_AUTH_GENERIC_OAUTH_AUTH_STYLE = "InHeader";
+            GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP = "true";
+            # Authelia 'admins' group -> Grafana Admin, everyone else -> Viewer.
+            GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH = "contains(groups[*], 'admins') && 'Admin' || 'Viewer'";
+          };
+          # Client secret kept out of the repo (create the grafana-oauth Secret).
+          envValueFrom = {
+            GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET.secretKeyRef = {
+              name = "grafana-oauth";
+              key = "client-secret";
+            };
           };
           persistence = {
             enabled = true;
