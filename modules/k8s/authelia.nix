@@ -149,7 +149,9 @@ in
           cookies:
             - domain: pvc.tools
               authelia_url: https://auth.pvc.tools
-              default_redirection_url: https://memos.pvc.tools
+              # No default_redirection_url: a DIRECT login at auth.pvc.tools lands on
+              # Authelia's own portal (manage 2FA, etc.) instead of auto-bouncing into
+              # an app. App-initiated logins still return to their app via `rd`.
               name: authelia_session
               same_site: lax
               inactivity: 7d       # session dies after a week of no use
