@@ -166,12 +166,20 @@ in
           local:
             path: /data/db.sqlite3
 
-        # Filesystem notifier (no SMTP yet): password-reset / 2FA-enrolment links
-        # get written to this file. Read them with:
-        #   kubectl -n authelia exec deploy/authelia -- cat /data/notifications.txt
+        # SMTP notifier (dedicated provider = SMTP2GO) — sends TOTP-enrolment and
+        # password-reset emails so friends can self-serve in the portal (no more
+        # fishing codes out of a file / the admin CLI). Only the PASSWORD is secret;
+        # it comes from the authelia-secrets Secret via
+        # AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE (see the Deployment env). host +
+        # username + sender are non-secret. `username` must MATCH the SMTP user you
+        # create in SMTP2GO (Settings → Users). Swap address+username for a different
+        # provider — the rest is identical.
         notifier:
-          filesystem:
-            filename: /data/notifications.txt
+          smtp:
+            address: 'submission://mail.smtp2go.com:2525' # 2525 = SMTP2GO's recommended STARTTLS port (dodges ISP blocking of 25/587)
+            username: 'auth.pvc.tools' # <- must equal the SMTP2GO SMTP username (globally unique across all SMTP2GO)
+            sender: 'Authelia <no-reply@pvc.tools>'
+            subject: '[Authelia] {title}'
       '';
     }
 
@@ -226,6 +234,12 @@ in
                   {
                     name = "AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE";
                     value = "/secrets/jwt-secret";
+                  }
+                  # SMTP (SMTP2GO) password — add `smtp-password` to authelia-secrets
+                  # BEFORE this rebuild, or Authelia won't start (missing file).
+                  {
+                    name = "AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE";
+                    value = "/secrets/smtp-password";
                   }
                 ];
                 ports = [ { containerPort = 9091; } ];
