@@ -12,8 +12,8 @@
     enable = true;
     role = "server";
     
-    # `kubectl` readable by non-root for SSH access
-    extraFlags = [ "--write-kubeconfig-mode=0644" ]; # ... I hope this doesn't have any unintended consequences hhahaaaa....
+    # kubectl readable by non-root (SSH access)
+    extraFlags = [ "--write-kubeconfig-mode=0644" ];
   };
 
   # Firewall (enabled in server.nix)
@@ -38,14 +38,9 @@
   # So standalone kubectl/k9s/helm find the cluster automatically.
   environment.variables.KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
 
-  # In-cluster split-horizon DNS (the third horizon, after laptop /etc/hosts and
-  # the LAN dnsmasq). Pods must resolve *.pvc.tools to pharika's LAN IP, NOT the
-  # public WAN IP — otherwise server-side calls between apps NAT-hairpin-fail from
-  # inside. Concretely: OIDC back-channel, e.g. Grafana's pod POSTing to
-  # https://auth.pvc.tools/api/oidc/token, times out against the WAN IP.
-  #   k3s imports any `*.server` key in the `coredns-custom` ConfigMap as an extra
-  #   CoreDNS server block. 10.0.0.141 = pharika eno2, where Traefik serves :443
-  #   with the valid wildcard cert (same target the laptop pins + LAN dnsmasq use).
+  # In-cluster DNS override:
+  #   pods resolve *.pvc.tools -> pharika's LAN IP (not the WAN IP), else app-to-app
+  #   calls hairpin and time out. k3s folds any *.server key here into CoreDNS.
   services.k3s.manifests.coredns-custom.content = {
     apiVersion = "v1";
     kind = "ConfigMap";

@@ -1,12 +1,7 @@
 { ... }:
 
-# Memos (http://pharika:5230)
-#   ROUTING NOTE: the Grafana Ingress is host-less and owns "/" on Traefik's
-#   :80, and Memos can't run under a subpath — so instead of an Ingress we give
-#   Memos a LoadBalancer Service. k3s's built-in servicelb (klipper) binds that
-#   port straight onto the host, so http://pharika:5230 hits it directly.
-#   (Upgrade path later: give it a real hostname + Ingress once you set up
-#   per-service DNS, then drop the open port.)
+# Memos:
+#   notes app. gated subdomain memos.pvc.tools + un-gated tailnet LoadBalancer :5230
 
 let
   ns = "memos";
@@ -46,9 +41,7 @@ in
       };
       spec = {
         replicas = 1;
-        # Recreate (not RollingUpdate): the RWO volume can't attach to two
-        # pods at once, so tear the old one down before starting the new one.
-        strategy.type = "Recreate";
+        strategy.type = "Recreate"; # RWO volume can't attach to two pods at once
         selector.matchLabels.app = "memos";
         template = {
           metadata.labels.app = "memos";
@@ -56,12 +49,8 @@ in
             containers = [
               {
                 name = "memos";
-                # :stable is a moving tag — pin to a version (e.g.
-                # neosmemo/memos:0.24.0) when you want reproducible upgrades.
-                image = "neosmemo/memos:stable";
-                # Recent images don't bake in a default port, so an unset port
-                # resolves to 0 and Memos binds nowhere ("running on port 0").
-                # Set it (and mode/data-dir) explicitly via MEMOS_* env.
+                image = "neosmemo/memos:stable"; # moving tag — pin a version for reproducible upgrades
+                # NOTE: set MEMOS_PORT explicitly — unset binds port 0 ("running on port 0")
                 env = [
                   {
                     name = "MEMOS_MODE";
@@ -104,12 +93,8 @@ in
         namespace = ns;
       };
       spec = {
-        # Kept as LoadBalancer for now so http://pharika:5230 (tailnet) still
-        # works as a fallback while we try out the subdomain path below. A
-        # LoadBalancer Service still has a ClusterIP underneath, so the
-        # IngressRoute can route to it unchanged. HARDENING LATER: flip this to
-        # ClusterIP and drop `port` from the firewall once subdomains + auth are
-        # proven.
+        # LoadBalancer: klipper binds :5230 on the host -> un-gated tailnet fallback
+        #   TODO: flip to ClusterIP + drop the firewall port once the subdomain's trusted
         type = "LoadBalancer";
         selector.app = "memos";
         ports = [
@@ -121,13 +106,8 @@ in
       };
     }
 
-    # Subdomain path: https://memos.pvc.tools via Traefik + the `le` wildcard cert
-    # (see traefik.nix), gated by Authelia (see authelia.nix). Runs in parallel
-    # with the LoadBalancer above (tailnet pharika:5230 stays open, un-gated).
-
-    # ForwardAuth middleware: Traefik asks Authelia to authorize each request.
-    # Defined in THIS namespace so no cross-namespace Traefik permission is needed
-    # — the address is just a cluster-DNS URL to the Authelia service.
+    # Gated subdomain: memos.pvc.tools (le cert + Authelia).
+    #   forwardAuth middleware is per-namespace to dodge cross-ns Traefik perms
     {
       apiVersion = "traefik.io/v1alpha1";
       kind = "Middleware";
@@ -150,7 +130,7 @@ in
         namespace = ns;
       };
       spec = {
-        entryPoints = [ "websecure" ]; # :443 only — avoids the host-less Grafana ingress on :80
+        entryPoints = [ "websecure" ]; # :443 only
         routes = [
           {
             match = "Host(`memos.pvc.tools`)";
@@ -166,8 +146,7 @@ in
         ];
         tls = {
           certResolver = "le";
-          # Request ONE wildcard cert and reuse it for every subdomain, instead
-          # of a separate cert per host (keeps us well under rate limits).
+          # one wildcard cert reused across subdomains (stays under LE rate limits)
           domains = [
             {
               main = "pvc.tools";

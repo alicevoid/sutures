@@ -1,25 +1,10 @@
 { ... }:
 
-# Observability stack for pharika's single-node k3s cluster: full LGTM.
-#   L(oki)    - logs, collected by Alloy, stored on-box
-#   G(rafana) - single UI (bundled in kube-prometheus-stack)
-#   T(empo)   - traces, OTLP receivers on 4317/4318 (apps push directly)
-#   M(etrics) - Prometheus, via kube-prometheus-stack
+# Observability:
+#   LGTM stack in the monitoring ns (Loki + Grafana + Metrics; Tempo off, see below)
+#   charts via k3s's Helm controller, pinned by `hash` (bump: set hash=""; rebuild; paste back)
 #
-# Everything lands in the `monitoring` namespace and is deployed by k3s's
-# built-in Helm controller from the HelmChart CRs generated here. Chart
-# tarballs are fetched at BUILD time and pinned by `hash` (fixed-output
-# derivations), so a rebuild is reproducible. To bump a chart: change
-# `version`, set `hash = "";`, rebuild, and paste the hash nix prints back.
-#
-# Persistent volumes use k3s's default `local-path` provisioner (data under
-# /var/lib/rancher/k3s/storage on the ext4 root).
-#
-# NOTE ON SECRETS: `values` set here land unencrypted in the world-readable
-# nix store, and this is a public repo- so NO secrets go in `values`.
-# Grafana's admin login comes from a k8s Secret named `grafana-admin` created
-# directly on pharika (one-time `kubectl create secret`, see README/memory),
-# so the password lives only in the cluster datastore, never in git or nix.
+#   NOTE: public repo -> no secrets in `values`. Grafana admin = grafana-admin Secret.
 
 let
   ns = "monitoring";
@@ -37,30 +22,21 @@ in
       targetNamespace = ns;
       createNamespace = true;
       values = {
-        # Grafana is our single pane of glass for L, G, T and M.
+        # Grafana — single pane of glass
         grafana = {
-          # Admin login comes from the out-of-band `grafana-admin` Secret
-          # (keys admin-user / admin-password), NOT from this repo. Create it
-          # on pharika before this chart starts, or Grafana won't schedule.
+          # admin login from the grafana-admin Secret (not this repo)
           admin = {
             existingSecret = "grafana-admin";
             userKey = "admin-user";
             passwordKey = "admin-password";
           };
-          # Serve under the public hostname so login POSTs / redirects use the
-          # right origin when reached via https://grafana.pvc.tools (through
-          # Traefik + Authelia). Without this Grafana rejects cross-host logins
-          # with "origin not allowed". (http://pharika/ still serves the UI, but
-          # log in via the subdomain from now on.)
+          # serve under the public hostname, else cross-host login = "origin not allowed"
           env = {
             GF_SERVER_ROOT_URL = "https://grafana.pvc.tools";
             GF_SERVER_DOMAIN = "grafana.pvc.tools";
 
-            # --- OIDC SSO via Authelia (generic_oauth) ---------------------------
-            # One login: Authelia is the identity provider, Grafana delegates to it.
-            # Non-secret settings here; the client SECRET comes from the grafana-oauth
-            # k8s Secret via envValueFrom below (never in this public repo). Grafana's
-            # own admin login (grafana-admin Secret) stays as a break-glass fallback.
+            # OIDC SSO via Authelia (generic_oauth). client secret from grafana-oauth below.
+            #   grafana-admin login stays as break-glass
             GF_AUTH_GENERIC_OAUTH_ENABLED = "true";
             GF_AUTH_GENERIC_OAUTH_NAME = "Authelia";
             GF_AUTH_GENERIC_OAUTH_CLIENT_ID = "grafana";
@@ -77,7 +53,7 @@ in
             # Authelia 'admins' group -> Grafana Admin, everyone else -> Viewer.
             GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH = "contains(groups[*], 'admins') && 'Admin' || 'Viewer'";
           };
-          # Client secret kept out of the repo (create the grafana-oauth Secret).
+          # client secret from the grafana-oauth Secret
           envValueFrom = {
             GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET.secretKeyRef = {
               name = "grafana-oauth";
@@ -114,9 +90,7 @@ in
 
         prometheus.prometheusSpec = {
           retention = "10d";
-          # Pick up ServiceMonitors/PodMonitors/Rules from *any* chart, not
-          # just ones labelled with this Helm release. Without this you'd
-          # silently miss metrics from loki/tempo/alloy etc.
+          # scrape ServiceMonitors/Rules from any chart, not just this release
           serviceMonitorSelectorNilUsesHelmValues = false;
           podMonitorSelectorNilUsesHelmValues = false;
           ruleSelectorNilUsesHelmValues = false;
@@ -193,9 +167,8 @@ in
       };
     };
 
-    # ---- Logs: collection -------------------------------------------------
-    # Alloy runs as a DaemonSet and tails pod logs via the k8s API, then
-    # pushes to Loki. No host log-path mounts needed.
+    # ---- Logs: collection ----
+    # Alloy DaemonSet tails pod logs via the k8s API -> Loki
     alloy = {
       repo = "https://grafana.github.io/helm-charts";
       name = "alloy";
@@ -280,16 +253,8 @@ in
     # };
   };
 
-  # ---- Grafana: https://grafana.pvc.tools via Traefik + Authelia ------------
-  # Host-based IngressRoute on :443 with the `le` wildcard cert, gated by the
-  # Authelia ForwardAuth middleware (defined here in the monitoring namespace —
-  # same per-namespace pattern as memos/karakeep).
-  #
-  # NOTE: this REPLACED an older host-less Ingress (HOSTS=`*`) that routed ALL
-  # port-80 traffic to Grafana — which meant any `http://<anything>.pvc.tools`
-  # served the Grafana login (it hijacked auth.pvc.tools etc.). That's gone; the
-  # web (:80) entrypoint now just redirects to :443 (see traefik.nix). Reach
-  # Grafana only at https://grafana.pvc.tools now.
+  # ---- Grafana: grafana.pvc.tools (le cert + Authelia) ----
+  #   forwardAuth middleware per-namespace, same as memos/karakeep
   services.k3s.manifests.grafana-route.content = [
     {
       apiVersion = "traefik.io/v1alpha1";

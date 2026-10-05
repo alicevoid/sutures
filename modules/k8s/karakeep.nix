@@ -1,50 +1,20 @@
 { ... }:
 
-# Karakeep (http://pharika:3000) — bookmark / omni-capture app (ex-Hoarder).
-#   Three containers in the `karakeep` namespace:
-#     web          - the Next.js app + workers (UI, port 3000)
-#     chrome       - headless Chromium; crawls saved links for titles,
-#                    previews, favicons and archived copies
-#     meilisearch  - full-text search index over everything (this is what
-#                    makes the search bar work)
+# Karakeep (ex-Hoarder) — bookmark / omni-capture:
+#   web (UI :3000) + chrome (headless crawler) + meilisearch (search index)
+#   gated subdomain karakeep.pvc.tools + un-gated tailnet LoadBalancer :3000
 #
-#   ROUTING NOTE: same constraint as memos.nix — the Grafana Ingress is
-#   host-less and owns "/" on Traefik's :80, so instead of an Ingress the web
-#   Service is a LoadBalancer. k3s's servicelb (klipper) binds 3000 onto the
-#   host, so http://pharika:3000 hits it directly. chrome/meilisearch are
-#   internal-only (ClusterIP). Upgrade path later: real hostname + HTTPS via
-#   the Tailscale operator, then drop the open port.
-#
-#   SECRETS: NEXTAUTH_SECRET and MEILI_MASTER_KEY must NOT live in this public
-#   repo (they'd land in the world-readable nix store). They come from an
-#   out-of-band k8s Secret named `karakeep-secrets` created directly on pharika
-#   (like grafana-admin), so they only ever live in the cluster datastore:
-#
-#     kubectl create namespace karakeep   # or let this manifest create it first
-#     kubectl -n karakeep create secret generic karakeep-secrets \
-#       --from-literal=nextauth-secret="$(openssl rand -base64 36)" \
-#       --from-literal=meili-master-key="$(openssl rand -base64 36)"
-#
-#   Create it before (or right after) the first rebuild, or the pods won't
-#   start. The master key must match between the web and meilisearch pods —
-#   they both read it from this one Secret, so they always agree.
-#
-#   AI tagging is intentionally OFF. Karakeep auto-tags via an LLM only if
-#   OPENAI_API_KEY (or an Ollama endpoint) is set — see the commented env on
-#   the web container for where to wire it in later.
+#   NOTE: needs a `karakeep-secrets` Secret (nextauth-secret, meili-master-key,
+#         oauth-client-secret). AI auto-tagging off (no inference backend set).
 
 let
   ns = "karakeep";
   webPort = 3000;
 
-  # Pinned for reproducible rebuilds. Bump deliberately:
-  #   - app   : latest release at https://github.com/karakeep-app/karakeep/releases
-  #   - meili : Meilisearch is index-format-sensitive; use the version Karakeep's
-  #             upstream docker-compose pins for this app release (currently v1.41.0).
+  # pinned; bump deliberately. meili is index-format-sensitive -> match karakeep's
+  # upstream compose version (v1.41.0); chrome only ships a floating `release` tag.
   webImage = "ghcr.io/karakeep-app/karakeep:0.33.2";
   meiliImage = "getmeili/meilisearch:v1.41.0";
-  # Karakeep ships its own Chromium image with remote-debugging baked in; it
-  # isn't index-sensitive and upstream only publishes a floating `release` tag.
   chromeImage = "ghcr.io/karakeep-app/karakeep-chrome:release";
 
   secretName = "karakeep-secrets";
@@ -60,9 +30,7 @@ in
       metadata.name = ns;
     }
 
-    # --- Storage ----------------------------------------------------------
-    # Web app's SQLite DB + uploaded/archived assets (images, PDFs, videos).
-    # 50Gi because 1GB video uploads are allowed (see MAX_ASSET_SIZE_MB).
+    # Storage: sqlite + assets. 50Gi since 1GB uploads are allowed (MAX_ASSET_SIZE_MB)
     {
       apiVersion = "v1";
       kind = "PersistentVolumeClaim";
@@ -91,7 +59,7 @@ in
       };
     }
 
-    # --- Meilisearch (internal) -------------------------------------------
+    # Meilisearch (internal)
     {
       apiVersion = "apps/v1";
       kind = "Deployment";
@@ -171,10 +139,8 @@ in
       };
     }
 
-    # --- Headless Chrome (internal) ---------------------------------------
-    # Flags mirror upstream's docker-compose `command:`. The image's entrypoint
-    # already enables remote debugging on 0.0.0.0:9222, so these are only the
-    # extra rendering flags. No PVC — it's stateless.
+    # Headless Chrome (internal, stateless) — crawls saved links.
+    #   flags mirror upstream compose; the image already enables debug on :9222
     {
       apiVersion = "apps/v1";
       kind = "Deployment";
@@ -205,8 +171,7 @@ in
                     cpu = "100m";
                     memory = "256Mi";
                   };
-                  # Chrome is the OOM risk; cap it so a heavy page can't
-                  # starve the box.
+                  # chrome is the OOM risk; cap it
                   limits = {
                     cpu = "1";
                     memory = "1Gi";
@@ -237,7 +202,7 @@ in
       };
     }
 
-    # --- Karakeep web (exposed) -------------------------------------------
+    # Karakeep web (exposed)
     {
       apiVersion = "apps/v1";
       kind = "Deployment";
@@ -262,9 +227,7 @@ in
                     value = "/data"; # SQLite DB + assets live here
                   }
                   {
-                    # Public hostname the app is reached at; used for NextAuth
-                    # callbacks. Must match the subdomain or Karakeep's own login
-                    # redirect-loops when accessed via https://karakeep.pvc.tools.
+                    # must match the public hostname or NextAuth callbacks redirect-loop
                     name = "NEXTAUTH_URL";
                     value = "https://karakeep.pvc.tools";
                   }
@@ -275,14 +238,8 @@ in
                       key = "nextauth-secret";
                     };
                   }
-                  # --- OIDC SSO via Authelia (single sign-on) --------------------
-                  # Karakeep delegates login to Authelia so there's no separate
-                  # Karakeep login. QUIRK: Karakeep doesn't fetch the userinfo email
-                  # itself, so Authelia must attach a claims_policy to this client
-                  # putting `email` in the id_token (see the oidc.yml template). The
-                  # client secret comes from the karakeep-secrets Secret. Karakeep's
-                  # own email/password login stays on as a fallback until Phase 3
-                  # (then add DISABLE_PASSWORD_AUTH=true).
+                  # OIDC SSO via Authelia. secret from karakeep-secrets.
+                  #   karakeep's own login stays on as break-glass (don't disable it)
                   {
                     name = "OAUTH_WELLKNOWN_URL";
                     value = "https://auth.pvc.tools/.well-known/openid-configuration";
@@ -302,7 +259,7 @@ in
                     name = "OAUTH_PROVIDER_NAME";
                     value = "Authelia";
                   }
-                  # Link the Authelia identity to the existing local account by email.
+                  # link the OIDC identity to an existing account by email
                   {
                     name = "OAUTH_ALLOW_DANGEROUS_EMAIL_ACCOUNT_LINKING";
                     value = "true";
@@ -323,19 +280,13 @@ in
                     value = "http://chrome:9222";
                   }
                   {
-                    # Allow up to 1GB uploads (videos). Default is 50.
+                    # allow up to 1GB uploads
                     name = "MAX_ASSET_SIZE_MB";
                     value = "1024";
                   }
-                  # --- AI auto-tagging (OFF) ---------------------------------
-                  # Karakeep only auto-tags/summarizes if an inference backend
-                  # is configured. To enable later, add ONE of:
-                  #   { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = {
-                  #       name = secretName; key = "openai-api-key"; }; }
-                  # ...or point at a local Ollama:
-                  #   { name = "OLLAMA_BASE_URL"; value = "http://ollama:11434"; }
-                  #   { name = "INFERENCE_TEXT_MODEL"; value = "<model>"; }
-                  # (and add the key to the karakeep-secrets Secret).
+                  # AI auto-tagging (off) — enable by setting an inference backend:
+                  #   { name = "OPENAI_API_KEY"; valueFrom.secretKeyRef = { name = secretName; key = "openai-api-key"; }; }
+                  #   ...or OLLAMA_BASE_URL + INFERENCE_TEXT_MODEL (+ the key in karakeep-secrets)
                 ];
                 ports = [ { containerPort = webPort; } ];
                 volumeMounts = [
@@ -374,11 +325,8 @@ in
         namespace = ns;
       };
       spec = {
-        # Kept as LoadBalancer for now so http://pharika:3000 (tailnet) still
-        # works as a fallback while we try out the subdomain path below. The
-        # IngressRoute routes to this same Service via its ClusterIP. HARDENING
-        # LATER: flip to ClusterIP, drop `webPort` from the firewall, and set
-        # NEXTAUTH_URL to https://karakeep.pvc.tools once auth is in front.
+        # LoadBalancer: klipper binds :3000 on the host -> un-gated tailnet fallback
+        #   TODO: flip to ClusterIP + drop the firewall port once the subdomain's trusted
         type = "LoadBalancer";
         selector.app = "karakeep";
         ports = [
@@ -390,18 +338,8 @@ in
       };
     }
 
-    # Subdomain path: https://karakeep.pvc.tools via Traefik + the `le` wildcard
-    # cert (see traefik.nix), gated by Authelia (see authelia.nix). Runs in
-    # parallel with the LoadBalancer above (tailnet pharika:3000 stays un-gated).
-    #
-    # NOTE: Karakeep has its OWN login (NextAuth) behind Authelia's — so via the
-    # subdomain you'll hit Authelia first, then Karakeep's login (expected). Also
-    # NEXTAUTH_URL is still http://pharika:3000 above, so Karakeep's own login via
-    # the subdomain may redirect-loop until that's switched to
-    # https://karakeep.pvc.tools (do that in the hardening cutover).
-
-    # ForwardAuth middleware: Traefik asks Authelia to authorize each request.
-    # Defined in THIS namespace so no cross-namespace Traefik permission is needed.
+    # Gated subdomain: karakeep.pvc.tools (le cert + Authelia).
+    #   forwardAuth middleware is per-namespace to dodge cross-ns Traefik perms
     {
       apiVersion = "traefik.io/v1alpha1";
       kind = "Middleware";

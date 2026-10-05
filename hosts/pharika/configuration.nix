@@ -21,29 +21,17 @@
   # SSH keyFiles
   users.users.alice.openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
 
-  # Split-horizon DNS for *.pvc.tools (kills the Xfinity NAT-hairpin).
-  #   LAN clients that resolve pvc.tools to the PUBLIC WAN IP can't reach it
-  #   from inside (Xfinity does no NAT loopback). So run a host-level resolver
-  #   that answers pvc.tools -> pharika's LAN IP, and hand it to LAN clients via
-  #   the gateway's DHCP DNS setting. External clients keep using public DNS ->
-  #   the :443 port-forward, unchanged. (The laptops instead pin to pharika's
-  #   tailnet IP in modules/laptop.nix, which is roam-proof and sidesteps this.)
-  #
-  #   Host-level, NOT a k8s pod on purpose: house DNS must survive k3s being down.
-  #   Nothing else binds host :53 (CoreDNS is a cluster ClusterIP), so this is clean.
+  # Split-horizon DNS for *.pvc.tools:
+  #   LAN devices resolve pvc.tools -> pharika (not the WAN IP) so they skip the hairpin.
+  #   host-level on purpose — house DNS shouldn't die with k3s. hand it out via DHCP.
   services.dnsmasq = {
     enable = true;
-    # Tailscale/MagicDNS owns pharika's own /etc/resolv.conf; leave it be.
-    resolveLocalQueries = false;
+    resolveLocalQueries = false; # Tailscale owns pharika's own resolv.conf; leave it be
     settings = {
-      # pvc.tools AND every *.pvc.tools -> pharika's LAN IP.
-      address = [ "/pvc.tools/10.0.0.141" ];
-      # Upstream for everything else; don't read resolv.conf (points at MagicDNS).
-      server = [ "1.1.1.1" "9.9.9.9" ];
+      address = [ "/pvc.tools/10.0.0.141" ]; # pvc.tools + all subdomains -> LAN IP
+      server = [ "1.1.1.1" "9.9.9.9" ]; # upstream for everything else
       no-resolv = true;
-      # Serve the LAN interface only. bind-dynamic tolerates eno2's DHCP address
-      # appearing at boot and keeps this from being a wildcard open resolver
-      # (the WAN forwards only :443 anyway).
+      # LAN iface only; bind-dynamic copes with eno2's DHCP addr at boot
       interface = "eno2";
       bind-dynamic = true;
       domain-needed = true;
@@ -51,7 +39,7 @@
     };
   };
 
-  # DNS on the firewall (dnsmasq itself only listens on eno2).
+  # open :53 (dnsmasq listens on eno2 only)
   networking.firewall.allowedUDPPorts = [ 53 ];
   networking.firewall.allowedTCPPorts = [ 53 ];
 
