@@ -7,7 +7,5 @@
     ./argocd.nix
     ./authelia.nix
     ./observability.nix
-    ./memos.nix
-    ./karakeep.nix
   ];
 }
