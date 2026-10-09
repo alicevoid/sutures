@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 
 # ArgoCD — the one app-layer thing Nix keeps:
 #   bootstraps argo-cd (Helm) + declares the root app-of-apps Application that points at
@@ -14,6 +14,10 @@ let
   staplesRepo = "https://github.com/alicevoid/staples";
 in
 {
+  # argocd CLI, for the migration runbook. Use it in `--core` mode (talks straight to the
+  # k8s API via KUBECONFIG, no argocd-server login/tunnel needed): `argocd app diff memos --core`.
+  environment.systemPackages = [ pkgs.argocd ];
+
   services.k3s.autoDeployCharts.argo-cd = {
     repo = "https://argoproj.github.io/argo-helm";
     name = "argo-cd";
