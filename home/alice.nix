@@ -1,6 +1,8 @@
 {
   pkgs,
   config,
+  lib,
+  osConfig,
   inputs,
   ...
 }:
@@ -62,6 +64,22 @@
       # TODO: put kunoros on tailnet 
     };
   };
+
+  # pharika only: a private kubeconfig whose context defaults to the argocd namespace, so
+  # `argocd --core` (and kubectl) just work in any new shell. The system KUBECONFIG is
+  # root-owned and namespace-less, which is what blocks core mode. Re-copied each rebuild,
+  # so it also self-heals if the k3s client cert ever rotates.
+  home.sessionVariables = lib.mkIf (osConfig.networking.hostName == "pharika") {
+    KUBECONFIG = "${config.home.homeDirectory}/.kube/config";
+  };
+  home.activation.argocdKubeconfig = lib.mkIf (osConfig.networking.hostName == "pharika") (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ -f /etc/rancher/k3s/k3s.yaml ]; then
+        $DRY_RUN_CMD install -Dm600 /etc/rancher/k3s/k3s.yaml "${config.home.homeDirectory}/.kube/config"
+        $DRY_RUN_CMD ${pkgs.kubectl}/bin/kubectl --kubeconfig="${config.home.homeDirectory}/.kube/config" config set-context --current --namespace=argocd
+      fi
+    ''
+  );
 
   programs.home-manager.enable = true;
 }
