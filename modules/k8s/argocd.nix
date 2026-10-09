@@ -24,6 +24,11 @@ in
     targetNamespace = ns;
     createNamespace = true;
     values = {
+      # Release name is "argo-cd", so without this the chart doubles the prefix into
+      # "argo-cd-argocd-server" etc. Pin the fullname so resources are the conventional
+      # "argocd-server", "argocd-repo-server", ... (matches upstream docs + the runbook).
+      fullnameOverride = "argocd";
+
       # Single-node homelab: skip the HA replicas, keep it lean.
       redis-ha.enabled = false;
       controller.replicas = 1;
