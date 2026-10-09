@@ -1,36 +1,34 @@
 { pkgs, ... }:
 
-# ArgoCD — the one app-layer thing Nix keeps:
-#   bootstraps argo-cd (Helm) + declares the root app-of-apps Application that points at
-#   the `staples` repo. From there Argo continuously reconciles every workload from git,
-#   so the cluster stops drifting from its source of truth (the whole reason for the move;
-#   see k8s/ARGOCD.md). Workloads themselves live in `staples`, NOT here.
-#
-#   Boundary: Nix owns the cluster substrate (k3s, Traefik controller, this bootstrap);
-#   Argo owns the workloads + routes. One owner per resource — they never fight.
+# ArgoCD: the one app-layer thing Nix keeps.
+#   Bootstraps argo-cd (Helm) and declares the root app-of-apps Application pointing at the
+#   staples repo. From there Argo reconciles every workload from git, so the cluster stops
+#   drifting from its source of truth (see notes/k8s/ARGOCD.md). Workloads live in staples,
+#   not here. Boundary: Nix owns the substrate (k3s, Traefik controller, this bootstrap);
+#   Argo owns the workloads + routes. One owner per resource.
 
 let
   ns = "argocd";
   staplesRepo = "https://github.com/alicevoid/staples";
 in
 {
-  # argocd CLI, for the migration runbook. Use it in `--core` mode (talks straight to the
-  # k8s API via KUBECONFIG, no argocd-server login/tunnel needed): `argocd app diff memos --core`.
+  # argocd CLI for driving the cluster. Use --core (talks to the k8s API via KUBECONFIG, no
+  # server login). It needs the kube context namespace = argocd:
+  #   install -Dm600 /etc/rancher/k3s/k3s.yaml ~/.kube/config
+  #   export KUBECONFIG=$HOME/.kube/config && kubectl config set-context --current --namespace=argocd
   environment.systemPackages = [ pkgs.argocd ];
 
   services.k3s.autoDeployCharts.argo-cd = {
     repo = "https://argoproj.github.io/argo-helm";
     name = "argo-cd";
     version = "10.10.1"; # Argo CD v3.5.4
-    # Fixed-output hash (same dance as observability.nix): to bump, change `version`,
-    # set `hash = "";`, rebuild, paste back the hash nix prints.
+    # Fixed-output hash: to bump, change version, set hash = "", rebuild, paste back what nix prints.
     hash = "sha256-Q9XSEoLJAHEAHBRRCIMfcf8Bcutd/htr0GE3QJ2PbF4=";
     targetNamespace = ns;
     createNamespace = true;
     values = {
       # Release name is "argo-cd", so without this the chart doubles the prefix into
-      # "argo-cd-argocd-server" etc. Pin the fullname so resources are the conventional
-      # "argocd-server", "argocd-repo-server", ... (matches upstream docs + the runbook).
+      # "argo-cd-argocd-server". Pin the fullname to the conventional "argocd-server" etc.
       fullnameOverride = "argocd";
 
       # Single-node homelab: skip the HA replicas, keep it lean.
@@ -40,16 +38,17 @@ in
       repoServer.replicas = 1;
       applicationSet.replicas = 1;
 
-      # Traefik terminates TLS at the edge; run argocd-server plaintext behind it so we
-      # don't fight over double-TLS. Reach the UI via port-forward during the migration:
-      #   kubectl -n argocd port-forward svc/argocd-server 8080:443
+      # Run argocd-server plaintext (no edge TLS yet). Reach the UI over an ssh tunnel:
+      #   ssh -L 9090:localhost:9090 pharika 'kubectl -n argocd port-forward svc/argocd-server 9090:80'
+      # then http://localhost:9090. (A future argocd.pvc.tools route would retire the tunnel.)
       configs.params."server.insecure" = true;
     };
   };
 
-  # Root app-of-apps. MUST stay identical to staples/bootstrap/root.yaml — this Nix addon
-  # is what actually applies it (the single Nix -> Argo handoff). Everything downstream
-  # (apps/ -> manifests/ + charts/) is reconciled by Argo from the staples repo.
+  # Root app-of-apps. Keep identical to staples/bootstrap/root.yaml; this addon is what applies
+  # it on the cluster (the single Nix -> Argo handoff). Argo then reconciles apps/ -> the rest.
+  # Self-heal on, prune off: a new file in apps/ spawns its child Application; removing one does
+  # not auto-delete it.
   services.k3s.manifests.argocd-root.content = {
     apiVersion = "argoproj.io/v1alpha1";
     kind = "Application";
@@ -68,9 +67,6 @@ in
         server = "https://kubernetes.default.svc";
         namespace = ns;
       };
-      # Auto-sync the app-of-apps so adding/removing files in staples/apps/ propagates to
-      # the child Application objects. prune OFF so a removed app file never auto-deletes.
-      # The CHILD Applications are what gate real workload changes (manual during migration).
       syncPolicy.automated = {
         prune = false;
         selfHeal = true;
