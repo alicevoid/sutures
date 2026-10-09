@@ -20,7 +20,7 @@ in
     version = "10.10.1"; # Argo CD v3.5.4
     # Fixed-output hash (same dance as observability.nix): to bump, change `version`,
     # set `hash = "";`, rebuild, paste back the hash nix prints.
-    hash = "";
+    hash = "sha256-Q9XSEoLJAHEAHBRRCIMfcf8Bcutd/htr0GE3QJ2PbF4=";
     targetNamespace = ns;
     createNamespace = true;
     values = {
