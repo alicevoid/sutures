@@ -3,7 +3,7 @@
 # ArgoCD: the one app-layer thing Nix keeps.
 #   Bootstraps argo-cd (Helm) and declares the root app-of-apps Application pointing at the
 #   staples repo. From there Argo reconciles every workload from git, so the cluster stops
-#   drifting from its source of truth (see notes/k8s/ARGOCD.md). Workloads live in staples,
+#   drifting from its source of truth. Workloads live in staples,
 #   not here. Boundary: Nix owns the substrate (k3s, Traefik controller, this bootstrap);
 #   Argo owns the workloads + routes. One owner per resource.
 
@@ -38,9 +38,6 @@ in
       repoServer.replicas = 1;
       applicationSet.replicas = 1;
 
-      # Run argocd-server plaintext (no edge TLS yet). Reach the UI over an ssh tunnel:
-      #   ssh -L 9090:localhost:9090 pharika 'kubectl -n argocd port-forward svc/argocd-server 9090:80'
-      # then http://localhost:9090. (A future argocd.pvc.tools route would retire the tunnel.)
       configs.params."server.insecure" = true;
     };
   };

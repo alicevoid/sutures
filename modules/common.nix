@@ -67,6 +67,7 @@
     btop
     claude-code
     curl
+    dig
     ffmpeg
     findutils
     fzf

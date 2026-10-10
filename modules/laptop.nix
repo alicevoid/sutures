@@ -11,19 +11,6 @@
 {
   imports = [ ./desktop.nix ];
 
-  # pvc.tools apps -> pharika's tailnet IP
-  #   so the laptops skip the Xfinity hairpin at home (and it works roaming too)
-  #   /etc/hosts beats MagicDNS; non-tailnet devices get this via dnsmasq on pharika
-  networking.hosts."100.100.169.0" = [
-    "auth.pvc.tools"
-    "memos.pvc.tools"
-    "karakeep.pvc.tools"
-    "grafana.pvc.tools"
-    "traefik.pvc.tools"
-    "argocd.pvc.tools"
-    "obsidian.pvc.tools"
-  ];
-
   # TODO:
   #   look into power mgmt / TLP defaults
   #   look into touchpad tweaks... if you swing that way... pervert
