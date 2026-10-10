@@ -21,6 +21,7 @@
     "grafana.pvc.tools"
     "traefik.pvc.tools"
     "argocd.pvc.tools"
+    "obsidian.pvc.tools"
   ];
 
   # TODO:
