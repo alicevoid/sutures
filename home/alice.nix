@@ -14,21 +14,6 @@
   home.homeDirectory = "/home/alice";
   home.stateVersion = "25.05";
 
-  home.packages = with pkgs; [
-    firefox
-    vscode
-    obsidian
-    claude-code
-    wl-clipboard
-    filezilla
-    wireshark
-    unzip
-    ffmpeg
-    pngquant
-    zoom-us
-    grim
-  ];
-
   programs.zsh = {
     enable = true;
     oh-my-zsh = {

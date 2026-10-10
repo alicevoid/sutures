@@ -50,7 +50,18 @@
     pulse.enable = true;
   };
 
-  # ...Other 
+  # ...Other
   services.flatpak.enable = true;
   gtk.iconCache.enable = true;
+
+  environment.systemPackages = with pkgs; [
+    filezilla
+    firefox
+    grim
+    obsidian
+    vscode
+    wireshark
+    wl-clipboard
+    zoom-us
+  ];
 }

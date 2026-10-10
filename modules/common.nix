@@ -64,15 +64,23 @@
   # Packages
   nixpkgs.config.allowUnfree = true;
   environment.systemPackages = with pkgs; [
-    vim
-    git
+    btop
+    claude-code
     curl
-    python3
+    ffmpeg
+    findutils
+    fzf
     gh
     git
     git-extras
     pciutils
+    pngquant
+    python3
+    ripgrep
+    tmux
+    unzip
     usbutils
+    vim
   ];
 
   # Zsh 
