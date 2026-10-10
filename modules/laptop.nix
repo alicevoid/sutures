@@ -20,6 +20,7 @@
     "karakeep.pvc.tools"
     "grafana.pvc.tools"
     "traefik.pvc.tools"
+    "argocd.pvc.tools"
   ];
 
   # TODO:
