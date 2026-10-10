@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 
 {
   imports = [ ./hardware-configuration.nix ];
@@ -39,7 +39,27 @@
     };
   };
 
-  # open :53 (dnsmasq listens on eno2 only)
+  systemd.services.dnsmasq-tailnet = {
+    description = "dnsmasq for tailnet split DNS (*.pvc.tools)";
+    after = [ "tailscaled.service" ];
+    wants = [ "tailscaled.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      ExecStart = "${pkgs.dnsmasq}/bin/dnsmasq -k --user=dnsmasq -C ${pkgs.writeText "dnsmasq-tailnet.conf" ''
+        interface=tailscale0
+        except-interface=lo
+        bind-dynamic
+        no-resolv
+        no-hosts
+        pid-file=
+        local=/pvc.tools/
+        address=/pvc.tools/100.100.169.0
+      ''}";
+      Restart = "on-failure";
+    };
+  };
+
+  # open :53 (dnsmasq listens on eno2 + tailscale0)
   networking.firewall.allowedUDPPorts = [ 53 ];
   networking.firewall.allowedTCPPorts = [ 53 ];
 
