@@ -18,18 +18,13 @@
     firefox
     vscode
     obsidian
-    git
-    git-extras
-    gh
     claude-code
-    python3
     wl-clipboard
     filezilla
     wireshark
     unzip
     ffmpeg
     pngquant
-    htop
     zoom-us
     grim
   ];

@@ -69,6 +69,7 @@
     curl
     python3
     gh
+    git
     git-extras
     pciutils
     usbutils
