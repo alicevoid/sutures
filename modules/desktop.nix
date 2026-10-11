@@ -54,9 +54,16 @@
   services.flatpak.enable = true;
   gtk.iconCache.enable = true;
 
+  programs.firefox = {
+    enable = true;
+    policies.DNSOverHTTPS = {
+      Enabled = false;
+      Locked = true;
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     filezilla
-    firefox
     grim
     obsidian
     vscode
