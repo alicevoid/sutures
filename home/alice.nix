@@ -27,9 +27,7 @@
     };
   };
 
-  # tmux tuned for Claude Code:
-  #   C-Space prefix (C-b is Claude's "background this command" key)
-  #   short escape-time so Esc interrupts Claude at once
+  # tmux config settings
   programs.tmux = {
     enable = true;
     prefix = "C-Space";
