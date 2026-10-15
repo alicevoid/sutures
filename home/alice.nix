@@ -20,6 +20,36 @@
       enable = true;
       theme = "lambda";
     };
+    # pharika: pt = tmux session "main", pa = claude agent view
+    shellAliases = {
+      pt = "ssh -t pharika tmux new -A -s main";
+      pa = "ssh -t pharika claude agents";
+    };
+  };
+
+  # tmux tuned for Claude Code:
+  #   C-Space prefix (C-b is Claude's "background this command" key)
+  #   short escape-time so Esc interrupts Claude at once
+  programs.tmux = {
+    enable = true;
+    prefix = "C-Space";
+    escapeTime = 10;
+    mouse = true;
+    historyLimit = 50000;
+    baseIndex = 1;
+    focusEvents = true;
+    terminal = "tmux-256color";
+    extraConfig = ''
+      # true color
+      set -as terminal-features ",*:RGB"
+      # Shift+Enter = new line in the Claude prompt
+      set -s extended-keys on
+      set -as terminal-features ",*:extkeys"
+      # let Claude notifications and titles through
+      set -g allow-passthrough on
+      # copy to the local clipboard (OSC 52), if the terminal supports it
+      set -g set-clipboard on
+    '';
   };
 
   services.flameshot = {

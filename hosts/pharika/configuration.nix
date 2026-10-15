@@ -21,6 +21,9 @@
   # SSH keyFiles
   users.users.alice.openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
 
+  # keep alice's user manager up after logout, so background claude sessions + tmux live on
+  users.users.alice.linger = true;
+
   # Split-horizon DNS for *.pvc.tools:
   #   LAN devices resolve pvc.tools -> pharika (not the WAN IP) so they skip the hairpin.
   #   host-level on purpose — house DNS shouldn't die with k3s. hand it out via DHCP.

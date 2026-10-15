@@ -92,4 +92,10 @@
     enable = true;
     flake = "/home/alice/sutures";
   };
+
+  # firefox settings
+  programs.firefox = {
+    enable = true;
+    policies.DNSOverHTTPS.ExcludedDomains = [ "pvc.tools" ];
+  };
 }
