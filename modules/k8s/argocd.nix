@@ -39,6 +39,23 @@ in
       applicationSet.replicas = 1;
 
       configs.params."server.insecure" = true;
+
+      configs.cm = {
+        url = "https://argocd.pvc.tools";
+        "oidc.config" = ''
+          name: Authelia
+          issuer: https://auth.pvc.tools
+          clientID: argocd
+          clientSecret: $argocd-oidc:client-secret
+          requestedScopes: [openid, profile, email, groups]
+        '';
+      };
+
+      configs.rbac = {
+        "policy.default" = "";
+        "policy.csv" = "g, admins, role:admin";
+        scopes = "[groups]";
+      };
     };
   };
 
