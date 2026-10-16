@@ -72,6 +72,7 @@
     findutils
     fzf
     gh
+    ghostty.terminfo # lets ghostty ssh in
     git
     git-extras
     pciutils

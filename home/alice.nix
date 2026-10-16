@@ -30,7 +30,8 @@
   # tmux config settings
   programs.tmux = {
     enable = true;
-    prefix = "C-Space";
+    prefix = "C-b";
+    keyMode = "vi";
     escapeTime = 10;
     mouse = true;
     historyLimit = 50000;
@@ -47,7 +48,22 @@
       set -g allow-passthrough on
       # copy to the local clipboard (OSC 52), if the terminal supports it
       set -g set-clipboard on
+      # copy mode keys
+      bind -T copy-mode-vi v   send -X begin-selection
+      bind -T copy-mode-vi C-v send -X rectangle-toggle
+      bind -T copy-mode-vi y   send -X copy-selection-and-cancel
     '';
+  };
+
+  # Ghostty: desktops only
+  #   NOTE: Console look-alike, but with OSC 52 so tmux/nvim copies over ssh land locally
+  programs.ghostty = lib.mkIf osConfig.services.desktopManager.gnome.enable {
+    enable = true;
+    settings = {
+      font-family = "Adwaita Mono";
+      font-size = 11;
+      theme = "light:Adwaita,dark:Adwaita Dark";
+    };
   };
 
   services.flameshot = {

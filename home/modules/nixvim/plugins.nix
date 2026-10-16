@@ -137,8 +137,8 @@
       settings = {
         snippet.expand.__raw = "function(args) require('luasnip').lsp_expand(args.body) end";
         mapping = {
-          "<C-b>".__raw = "cmp.mapping.scroll_docs(-4)";
-          "<C-f>".__raw = "cmp.mapping.scroll_docs(4)";
+          "<C-u>".__raw = "cmp.mapping.scroll_docs(-4)";
+          "<C-d>".__raw = "cmp.mapping.scroll_docs(4)";
           "<C-Space>".__raw = "cmp.mapping.complete()";
           "<C-e>".__raw = "cmp.mapping.abort()";
           "<CR>".__raw = "cmp.mapping.confirm({ select = true })";
