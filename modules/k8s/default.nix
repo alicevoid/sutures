@@ -3,7 +3,7 @@
 {
   imports = [
     ./k3s.nix
-    ./traefik.nix
+    ./cilium.nix
     ./argocd.nix
   ];
 }

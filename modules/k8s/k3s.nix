@@ -13,18 +13,30 @@
     role = "server";
     
     # kubectl readable by non-root (SSH access)
-    extraFlags = [ "--write-kubeconfig-mode=0644" ];
+    extraFlags = [
+      "--write-kubeconfig-mode=0644"
+      "--flannel-backend=none"
+      "--disable-network-policy"
+      "--disable-kube-proxy"
+      "--disable=servicelb"
+      "--disable=traefik"
+    ];
   };
 
   # Firewall (enabled in server.nix)
   networking.firewall = {
 
-    # Trust the CNI bridge so pods can reach the API server and CoreDNS.
-    trustedInterfaces = [ "cni0" ];
+    # Trust the Cilium interfaces so pods can reach the API server and CoreDNS.
+    trustedInterfaces = [
+      "cilium_host"
+      "cilium_net"
+      "cilium_vxlan"
+      "lxc+"
+    ];
     allowedTCPPorts = [
       6443 # Kubernetes API server
-      80 # Traefik ingress (HTTP) 
-      443 # Traefik ingress (HTTPS)
+      80 # Gateway API (Cilium Envoy, HTTP)
+      443 # Gateway API (Cilium Envoy, HTTPS)
     ];
   };
 
@@ -51,7 +63,7 @@
     data."pvc-tools.server" = ''
       pvc.tools:53 {
         hosts {
-          10.0.0.141 auth.pvc.tools memos.pvc.tools karakeep.pvc.tools grafana.pvc.tools traefik.pvc.tools
+          10.0.0.141 auth.pvc.tools memos.pvc.tools karakeep.pvc.tools grafana.pvc.tools hubble.pvc.tools
           fallthrough
         }
         forward . /etc/resolv.conf
