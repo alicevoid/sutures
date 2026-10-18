@@ -80,6 +80,7 @@
     python3
     ripgrep
     tmux
+    tldr
     unzip
     usbutils
     vim
