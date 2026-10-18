@@ -45,11 +45,6 @@ in
       tunnelProtocol = "vxlan";
       devices = [ "eno2" ];
 
-      cni = {
-        binPath = "/var/lib/rancher/k3s/data/cni";
-        confPath = "/var/lib/rancher/k3s/agent/etc/cni/net.d";
-      };
-
       operator = {
         replicas = 1;
         prometheus.serviceMonitor.enabled = true;
