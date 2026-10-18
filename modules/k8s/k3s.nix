@@ -23,7 +23,7 @@
     ];
   };
 
-  # Firewall (enabled in server.nix)
+  # Firewall (disabled in server.nix; these rules apply if it is turned on)
   networking.firewall = {
 
     # Trust the Cilium interfaces so pods can reach the API server and CoreDNS.

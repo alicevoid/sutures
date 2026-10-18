@@ -4,7 +4,7 @@
 #   Bootstraps argo-cd (Helm) and declares the root app-of-apps Application pointing at the
 #   staples repo. From there Argo reconciles every workload from git, so the cluster stops
 #   drifting from its source of truth. Workloads live in staples,
-#   not here. Boundary: Nix owns the substrate (k3s, Traefik controller, this bootstrap);
+#   not here. Boundary: Nix owns the substrate (k3s, Cilium, this bootstrap);
 #   Argo owns the workloads + routes. One owner per resource.
 
 let

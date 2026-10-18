@@ -26,7 +26,7 @@
 
   # Split-horizon DNS for *.pvc.tools:
   #   LAN devices resolve pvc.tools -> pharika (not the WAN IP) so they skip the hairpin.
-  #   host-level on purpose — house DNS shouldn't die with k3s. hand it out via DHCP.
+  #   host-level on purpose: house DNS shouldn't die with k3s. Set per device (the Xfinity gateway can't hand it out).
   services.dnsmasq = {
     enable = true;
     resolveLocalQueries = false; # Tailscale owns pharika's own resolv.conf; leave it be
