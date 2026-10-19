@@ -85,7 +85,10 @@
         hostname = "athreos";
         user = "alice";
       };
-      # TODO: put kunoros on tailnet 
+      kunoros = {
+        hostname = "kunoros";
+        user = "alice";
+      };
     };
   };
 
