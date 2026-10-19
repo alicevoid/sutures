@@ -25,6 +25,14 @@
       pt = "ssh -t pharika tmux new -A -s main";
       pa = "ssh -t pharika claude agents";
     };
+    # Turn off mouse, focus, and kitty-keyboard modes for dropped SSH sessions
+    initContent = ''
+      _reset_term_modes() {
+        printf '\e[?1000l\e[?1002l\e[?1003l\e[?1005l\e[?1006l\e[?1015l\e[?1004l\e[<99u'
+      }
+      autoload -Uz add-zsh-hook
+      add-zsh-hook precmd _reset_term_modes
+    '';
   };
 
   # tmux config settings
