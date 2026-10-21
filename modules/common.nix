@@ -86,7 +86,17 @@
     vim
   ];
 
-  # Zsh 
+  # TLS trust: eMudhra CA key compromise (Oct 2026, Mozilla bug 2083449)
+  #   NOTE: Temporary. Removes the emSign roots from the system CA bundle.
+  #   NOTE: G3 anchors the compromised intermediates. C1 and C3 follow Mozilla bug 2083709.
+  #   TODO: Remove this block when nixpkgs cacert is 3.131.1 or later.
+  security.pki.caCertificateBlacklist = [
+    "emSign ECC Root CA - G3"
+    "emSign ECC Root CA - C3"
+    "emSign Root CA - C1"
+  ];
+
+  # Zsh
   programs.zsh.enable = true;
 
   # Nix Helper 
