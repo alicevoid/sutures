@@ -19,7 +19,11 @@
   # networking.nameservers = [ "1.1.1.1" "9.9.9.9" ];
 
   # SSH keyFiles
-  users.users.alice.openssh.authorizedKeys.keyFiles = [ ./keys/athreos.pub ];
+  users.users.alice.openssh.authorizedKeys.keyFiles = [ 
+    ./keys/athreos.pub 
+    ./keys/kunoros.pub
+  ];
+
 
   # keep alice's user manager up after logout, so background claude sessions + tmux live on
   users.users.alice.linger = true;
