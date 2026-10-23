@@ -72,14 +72,8 @@ in
       script = "!include scripts.yaml";
       scene = "!include scenes.yaml";
 
-      # Reverse proxy: requests arrive from pharika's Gateway (10.0.0.141)
-      http = {
-        use_x_forwarded_for = true;
-        trusted_proxies = [
-          "127.0.0.1"
-          "10.0.0.0/8"
-        ];
-      };
+      # NOTE: no `http:` block. Since HA 2026.10 it lives in the UI (Settings > System > Network).
+      #   The old block (use_x_forwarded_for, trusted_proxies 127.0.0.1 + 10.0.0.0/8) was imported on first boot.
     };
   };
 
