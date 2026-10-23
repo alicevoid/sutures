@@ -24,7 +24,6 @@
     ./keys/kunoros.pub
   ];
 
-  # keep alice's user manager up after logout, so background claude sessions + tmux live on
   users.users.alice.linger = true;
 
   # Split-horizon DNS for *.pvc.tools:

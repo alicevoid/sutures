@@ -1,5 +1,5 @@
 {
-  description = "sutures - athreos, kunoros & pharika";
+  description = "sutures - athreos, kunoros, pharika & ephara";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -70,6 +70,12 @@
           ./modules/k8s 
           ./hosts/pharika/configuration.nix
           ./hosts/pharika/hardware-configuration.nix
+        ];
+
+        ephara = mkSystem [
+          ./modules/server.nix
+          ./hosts/ephara/configuration.nix
+          ./hosts/ephara/hardware-configuration.nix
         ];
       };
     };
