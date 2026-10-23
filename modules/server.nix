@@ -67,10 +67,7 @@
       cockpit-machines
       cockpit-zfs
     ];
-    allowed-origins = [
-      "http://pharika:8010"
-      "http://10.0.0.141:8010"
-    ];
+    allowed-origins = [ "*" ];
     settings.WebService = {
       ProtocolHeader = "X-Forwarded-Proto";
       ForwardedForHeader = "X-Forwarded-For";

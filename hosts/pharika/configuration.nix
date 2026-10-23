@@ -19,11 +19,10 @@
   # networking.nameservers = [ "1.1.1.1" "9.9.9.9" ];
 
   # SSH keyFiles
-  users.users.alice.openssh.authorizedKeys.keyFiles = [ 
-    ./keys/athreos.pub 
+  users.users.alice.openssh.authorizedKeys.keyFiles = [
+    ./keys/athreos.pub
     ./keys/kunoros.pub
   ];
-
 
   # keep alice's user manager up after logout, so background claude sessions + tmux live on
   users.users.alice.linger = true;
@@ -36,10 +35,13 @@
     resolveLocalQueries = false; # Tailscale owns pharika's own resolv.conf; leave it be
     settings = {
       address = [ "/pvc.tools/10.0.0.141" ]; # pvc.tools + all subdomains -> LAN IP
-      server = [ "1.1.1.1" "9.9.9.9" ]; # upstream for everything else
+      server = [
+        "1.1.1.1"
+        "9.9.9.9"
+      ]; # upstream for everything else
       no-resolv = true;
       # LAN iface only; bind-dynamic copes with eno2's DHCP addr at boot
-      interface = "eno2";
+      interface = "br0";
       bind-dynamic = true;
       domain-needed = true;
       bogus-priv = true;
@@ -69,6 +71,24 @@
   # open :53 (dnsmasq listens on eno2 + tailscale0)
   networking.firewall.allowedUDPPorts = [ 53 ];
   networking.firewall.allowedTCPPorts = [ 53 ];
+
+  # NOTE(diamond): enslave the ethernet interface, so that the VM bridge interface
+  # becomes the master which dominates all virtual machines.
+  networking.bridges.br0.interfaces = [ "eno2" ];
+  networking.interfaces.br0.macAddress = "8c:16:45:e1:56:e7";
+  networking.interfaces.br0.ipv4.addresses = [
+    {
+      address = "10.0.0.141";
+      prefixLength = 24;
+    }
+  ];
+  networking.interfaces.eno2.useDHCP = false;
+  networking.defaultGateway = {
+    address = "10.0.0.1";
+    interface = "br0";
+  };
+  networking.nameservers = [ "10.0.0.1" ];
+  networking.dhcpcd.extraConfig = "clientid";
 
   # never change
   system.stateVersion = "26.05";

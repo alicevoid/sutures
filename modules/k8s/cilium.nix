@@ -60,7 +60,7 @@ in
       ipam.mode = "kubernetes";
       routingMode = "tunnel";
       tunnelProtocol = "vxlan";
-      devices = [ "eno2" ];
+      devices = [ "br0" ];
 
       operator = {
         replicas = 1;
