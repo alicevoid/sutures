@@ -10,6 +10,25 @@ let
     mkdir -p $out/themes
     cp ${./hass/themes}/*.yaml $out/themes/
   '';
+
+  # TCL Home (unofficial): the TCL portable AC, through TCL's cloud (TCL Home app account)
+  #   Not in nixpkgs. Packaged here like nixpkgs' own custom components.
+  #   To bump: change version, set hash = "", rebuild, paste back what nix prints.
+  tclHome = pkgs.buildHomeAssistantComponent rec {
+    owner = "nemesa";
+    domain = "tcl_home_unofficial";
+    version = "3.16.0";
+    src = pkgs.fetchFromGitHub {
+      owner = "nemesa";
+      repo = "ha-tcl-home-unofficial-integration";
+      tag = version;
+      hash = "sha256-p+vmRfrpk1nlgReI5RjJWjL84QSndKWQOJXm9ktPVlE=";
+    };
+    # manifest.json lists no requirements, but aws_iot.py imports boto3 (jwt ships with HA)
+    dependencies = [ pkgs.home-assistant.python3Packages.boto3 ];
+    dontBuild = true;
+    doCheck = false;
+  };
 in
 {
   services.home-assistant = {
@@ -47,7 +66,8 @@ in
 
     customComponents = with pkgs.home-assistant-custom-components; [
       scheduler # alarm-clock style schedules (pairs with scheduler-card)
-      tuya_local # TCL two-hose AC (Smart Life app), controlled on the LAN, no Tuya cloud
+    ] ++ [
+      tclHome # TCL two-hose portable AC (TCL Home app)
     ];
 
     # Cards, registered as Lovelace resources automatically
