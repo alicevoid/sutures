@@ -24,6 +24,7 @@ in
       "isal" # faster compression, quiets a startup warning
 
       # in use
+      "androidtv_remote" # Google TV Streamer 4K, also found by discovery
       "backup"
       "cast"
       "go2rtc" # the module puts the go2rtc binary on HA's path
@@ -84,7 +85,11 @@ in
 
   # Matter controller for HA (ws://localhost:5580)
   #   Devices are shared in from Google Home (Matter multi-admin)
-  services.matter-server.enable = true;
+  #   NOTE: matterjs, not python matter-server: 8.1.2 dies at startup parsing a DCL cert (2026-10-23)
+  services.matterjs-server = {
+    enable = true;
+    extraArgs = [ "--primary-interface=enp0s31f6" ]; # link-local IPv6 for Matter/Thread
+  };
 
   # Music Assistant (web UI on :8095), plays to Sonos, Cast and HA media players
   services.music-assistant = {
