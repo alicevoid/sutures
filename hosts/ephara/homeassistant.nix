@@ -46,8 +46,7 @@ in
 
     customComponents = with pkgs.home-assistant-custom-components; [
       scheduler # alarm-clock style schedules (pairs with scheduler-card)
-      # TODO: TCL air conditioner, once we know which app it uses
-      #   Smart Life / Tuya -> tuya_local    IR remote only -> smartir    TCL Home -> package tcl_home_unofficial
+      tuya_local # TCL two-hose AC (Smart Life app), controlled on the LAN, no Tuya cloud
     ];
 
     # Cards, registered as Lovelace resources automatically
