@@ -49,7 +49,7 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-  # We're all just different flavors of alice :3c  
+  # We're all just different flavors 
   users.users.alice = {
     isNormalUser = true;
     description = "alice";
