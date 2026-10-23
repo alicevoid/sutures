@@ -49,6 +49,65 @@ in
           clientSecret: $argocd-oidc:client-secret
           requestedScopes: [openid, profile, email, groups]
         '';
+
+        # The chart's default exclusions, minus EndpointSlice:
+        #   staples hand-writes EndpointSlices for backends outside the cluster (HA on ephara).
+        #   Safe: Argo tracks by annotation, and controller-made slices carry none, so it never claims them.
+        #   NOTE: on a chart bump, diff this against the chart's configs.cm."resource.exclusions".
+        "resource.exclusions" = ''
+          ### Endpoints stay excluded (control-plane made); EndpointSlice is managed for external backends
+          - apiGroups:
+            - ""
+            kinds:
+            - Endpoints
+          ### Internal Kubernetes resources excluded reduce the number of watched events
+          - apiGroups:
+            - coordination.k8s.io
+            kinds:
+            - Lease
+          ### Internal Kubernetes Authz/Authn resources excluded reduce the number of watched events
+          - apiGroups:
+            - authentication.k8s.io
+            - authorization.k8s.io
+            kinds:
+            - SelfSubjectReview
+            - TokenReview
+            - LocalSubjectAccessReview
+            - SelfSubjectAccessReview
+            - SelfSubjectRulesReview
+            - SubjectAccessReview
+          ### Intermediate Certificate Request excluded reduce the number of watched events
+          - apiGroups:
+            - certificates.k8s.io
+            kinds:
+            - CertificateSigningRequest
+          - apiGroups:
+            - cert-manager.io
+            kinds:
+            - CertificateRequest
+          ### Cilium internal resources excluded reduce the number of watched events and UI Clutter
+          - apiGroups:
+            - cilium.io
+            kinds:
+            - CiliumIdentity
+            - CiliumEndpoint
+            - CiliumEndpointSlice
+          ### Kyverno intermediate and reporting resources excluded reduce the number of watched events and improve performance
+          - apiGroups:
+            - kyverno.io
+            - reports.kyverno.io
+            - wgpolicyk8s.io
+            kinds:
+            - PolicyReport
+            - ClusterPolicyReport
+            - EphemeralReport
+            - ClusterEphemeralReport
+            - AdmissionReport
+            - ClusterAdmissionReport
+            - BackgroundScanReport
+            - ClusterBackgroundScanReport
+            - UpdateRequest
+        '';
       };
 
       configs.rbac = {
