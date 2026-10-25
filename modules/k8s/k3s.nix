@@ -15,6 +15,9 @@
     # kubectl readable by non-root (SSH access)
     extraFlags = [
       "--write-kubeconfig-mode=0644"
+      # Wired br0 address. Without it k3s picks the Wi-Fi (10.0.0.214), and Cilium's VXLAN
+      # tunnel to other nodes would run over Wi-Fi.
+      "--node-ip=10.0.0.141"
       "--flannel-backend=none"
       "--disable-network-policy"
       "--disable-kube-proxy"
