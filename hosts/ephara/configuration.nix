@@ -41,6 +41,20 @@
     "zfs.zfs_arc_max=6442450944" # 6 GiB ARC cap, leaves RAM for k3s, HA and Jellyfin
   ];
 
+  # TEMPORARY (2026-10-25): offline root shrink from the initrd rescue shell (the USB boot loops).
+  #   Boot once with rd.systemd.unit=rescue.target, run shrink-root.sh from the ESP.
+  #   Remove this whole block after the shrink: emergencyAccess gives a root shell at the console.
+  boot.initrd.systemd.emergencyAccess = true;
+  boot.initrd.supportedFilesystems.vfat = true;
+  boot.initrd.systemd.extraBin = {
+    sgdisk = "${pkgs.gptfdisk}/bin/sgdisk";
+    partprobe = "${pkgs.parted}/bin/partprobe";
+    e2fsck = "${pkgs.e2fsprogs}/bin/e2fsck";
+    resize2fs = "${pkgs.e2fsprogs}/bin/resize2fs";
+    findmnt = "${pkgs.util-linux}/bin/findmnt";
+    lsblk = "${pkgs.util-linux}/bin/lsblk";
+  };
+
   # Drive health
   services.smartd.enable = true;
 
