@@ -34,26 +34,18 @@
   #   hostId: random, never change (ZFS uses it to tell which host owns a pool)
   boot.supportedFilesystems = [ "zfs" ];
   networking.hostId = "9bd9aba7";
+  boot.zfs.forceImportRoot = false; # root is ext4; never force-import a pool another host used
   services.zfs.autoScrub.enable = true; # monthly
+
+  # nscd: the resolvconf hook restarts it on every resolv.conf change. At boot NetworkManager
+  #   and Tailscale rewrite that file several times in seconds, nscd hits the start limit and
+  #   stays down. Without nscd, DynamicUser services (matterjs-server) cannot look up their user.
+  systemd.services.nscd.startLimitIntervalSec = 0;
 
   boot.kernelParams = [
     "ahci.mobile_lpm_policy=1" # SATA link power saving off (part of the 2026-10-23 link-drop fix)
     "zfs.zfs_arc_max=6442450944" # 6 GiB ARC cap, leaves RAM for k3s, HA and Jellyfin
   ];
-
-  # TEMPORARY (2026-10-25): offline root shrink from the initrd rescue shell (the USB boot loops).
-  #   Boot once with rd.systemd.unit=rescue.target, run shrink-root.sh from the ESP.
-  #   Remove this whole block after the shrink: emergencyAccess gives a root shell at the console.
-  boot.initrd.systemd.emergencyAccess = true;
-  boot.initrd.supportedFilesystems.vfat = true;
-  boot.initrd.systemd.extraBin = {
-    sgdisk = "${pkgs.gptfdisk}/bin/sgdisk";
-    partprobe = "${pkgs.parted}/bin/partprobe";
-    e2fsck = "${pkgs.e2fsprogs}/bin/e2fsck";
-    resize2fs = "${pkgs.e2fsprogs}/bin/resize2fs";
-    findmnt = "${pkgs.util-linux}/bin/findmnt";
-    lsblk = "${pkgs.util-linux}/bin/lsblk";
-  };
 
   # Drive health
   services.smartd.enable = true;
