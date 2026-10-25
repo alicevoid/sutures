@@ -106,18 +106,23 @@
   # SSH Client Aliases (Tailscale MagicDNS)
   programs.ssh = {
     enable = true;
-    matchBlocks = {
+    enableDefaultConfig = false;
+    settings = {
       pharika = {
-        hostname = "pharika";
-        user = "alice";
+        HostName = "pharika";
+        User = "alice";
       };
       athreos = {
-        hostname = "athreos";
-        user = "alice";
+        HostName = "athreos";
+        User = "alice";
       };
       kunoros = {
-        hostname = "kunoros";
-        user = "alice";
+        HostName = "kunoros";
+        User = "alice";
+      };
+      ephara = {
+        HostName = "ephara";
+        User = "alice";
       };
     };
   };
