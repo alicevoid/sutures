@@ -1,8 +1,7 @@
 { pkgs, ... }:
 
 
-# k3s Cluster 
-#   Currently designed for Single-node (see pharika in flake)  
+# k3s server (pharika, through default.nix). Workers use agent.nix.
 #   State lives in /var/lib/rancher/k3s (persistent ext4 root, no extra config).
 
 {

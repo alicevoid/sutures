@@ -49,7 +49,7 @@
     };
   };
 
-  # ZFS: pool "tank" on the 14 TB drives (replaces the mdadm mirror)
+  # ZFS: pool "tank", a mirror of the two 14 TB drives
   #   hostId: random, never change (ZFS uses it to tell which host owns a pool)
   boot.supportedFilesystems = [ "zfs" ];
   networking.hostId = "9bd9aba7";
@@ -64,7 +64,7 @@
   #   stays down. Without nscd, DynamicUser services (matterjs-server) cannot look up their user.
   systemd.services.nscd.startLimitIntervalSec = 0;
 
-  # Folder layout on /data (MIGRATION Step 5): one folder per type of content, not per app.
+  # Folder layout on /data (MIGRATION, "Storage reference"): one folder per type of content, not per app.
   #   media/ and downloads/ live in the same dataset (tank), so hard links and moves stay instant.
   #   A service, not systemd.tmpfiles: tmpfiles runs before the pool mounts and would create the
   #   folders on the root fs under the mountpoint.
@@ -113,6 +113,76 @@
   systemd.services.nfs-server = {
     after = [ "zfs-mount.service" ];
     unitConfig.ConditionPathIsMountPoint = "/data/shared";
+  };
+
+  # Snapshots (sanoid): read-only points in time. A delete or ransomware cannot reach older ones.
+  #   tank itself (media, downloads) gets none: it can be downloaded again, and churn would fill them.
+  #   Browse: ls /data/<dataset>/.zfs/snapshot/   List: zfs list -t snapshot
+  services.sanoid = {
+    enable = true;
+    templates = {
+      vault = {
+        hourly = 48;
+        daily = 30;
+        monthly = 6;
+        autosnap = true;
+        autoprune = true;
+      };
+      backup = {
+        hourly = 0;
+        daily = 30;
+        monthly = 12;
+        daily_hour = 4; # after pharika's 02:30 pvc-backup and the 03:00 HA copy
+        autosnap = true;
+        autoprune = true;
+      };
+      shared = {
+        hourly = 0;
+        daily = 14;
+        monthly = 0;
+        autosnap = true;
+        autoprune = true;
+      };
+    };
+    datasets = {
+      "tank/vaults".useTemplate = [ "vault" ];
+      "tank/shared".useTemplate = [ "shared" ];
+      "tank/backups" = {
+        useTemplate = [ "backup" ];
+        recursive = true;
+      };
+    };
+  };
+
+  # Nightly copy of Home Assistant's state to the pool (03:00).
+  #   The recorder database gets a consistent SQLite .backup copy. A raw copy of a live SQLite file
+  #   can be torn. The rest is a plain rsync. sanoid snapshots tank/backups at 04:00.
+  systemd.services.hass-backup = {
+    description = "Copy Home Assistant state to /data/backups/homeassistant";
+    unitConfig = {
+      RequiresMountsFor = "/data/backups/homeassistant";
+      ConditionPathIsMountPoint = "/data/backups/homeassistant";
+    };
+    path = [
+      pkgs.rsync
+      pkgs.sqlite
+    ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      set -euo pipefail
+      dest=/data/backups/homeassistant
+      sqlite3 /var/lib/hass/home-assistant_v2.db ".backup '$dest/home-assistant_v2.db.tmp'"
+      mv "$dest/home-assistant_v2.db.tmp" "$dest/home-assistant_v2.db"
+      rsync -a --delete --exclude 'home-assistant_v2.db*' /var/lib/hass/ "$dest/hass/"
+      date -Is > "$dest/LAST_SUCCESS"
+    '';
+  };
+  systemd.timers.hass-backup = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "03:00";
+      Persistent = true;
+    };
   };
 
   # Drive health

@@ -89,6 +89,81 @@
   networking.nameservers = [ "10.0.0.1" ];
   networking.dhcpcd.extraConfig = "clientid";
 
+  # Nightly PVC backup to ephara's ZFS pool (02:30). ephara snapshots it at 04:00 (sanoid).
+  #   NFS export /data/backups/pharika (no_root_squash for this host only, so file owners survive).
+  #   SQLite files get a consistent .backup copy first. A raw copy of a live SQLite file can be torn.
+  #   Skipped: prometheus, loki, alertmanager (metrics and logs, rolled over in days) and the old
+  #   traefik PVC. Restore: copy a PVC folder back with the app scaled to 0, or use the sqlite/ dump.
+  boot.supportedFilesystems = [ "nfs" ];
+  fileSystems."/mnt/ephara-backups" = {
+    device = "10.0.0.65:/data/backups/pharika";
+    fsType = "nfs";
+    options = [
+      "nfsvers=4.2"
+      "hard"
+      "noauto"
+      "x-systemd.automount"
+      "x-systemd.idle-timeout=600"
+      "x-systemd.mount-timeout=30"
+      "nofail"
+      "_netdev"
+    ];
+  };
+
+  systemd.services.pvc-backup = {
+    description = "Back up k3s PVCs and cluster state to ephara";
+    path = [
+      pkgs.rsync
+      pkgs.sqlite
+      pkgs.util-linux
+      pkgs.findutils
+      pkgs.coreutils
+    ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      set -euo pipefail
+      dest=/mnt/ephara-backups
+      work=/var/tmp/pvc-backup
+      storage=/var/lib/rancher/k3s/storage
+
+      # Never write to the local folder: the NFS mount must be there.
+      ls "$dest" >/dev/null   # triggers the automount
+      [ "$(findmnt -no FSTYPE "$dest")" = nfs4 ] || { echo "$dest is not the NFS mount. Stop."; exit 1; }
+
+      # 1. Consistent copies of every SQLite database (PVCs and the k3s datastore)
+      rm -rf "$work"; mkdir -p "$work/sqlite"
+      find "$storage" /var/lib/rancher/k3s/server/db -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) |
+        while read -r f; do
+          [ "$(head -c 15 "$f")" = "SQLite format 3" ] || continue
+          rel=''${f#/var/lib/rancher/k3s/}
+          mkdir -p "$work/sqlite/$(dirname "$rel")"
+          sqlite3 "$f" ".backup '$work/sqlite/$rel'"
+        done
+
+      # 2. The PVC folders, as they are
+      rsync -aH --numeric-ids --delete \
+        --exclude '*_monitoring_prometheus-*' \
+        --exclude '*_monitoring_storage-loki-*' \
+        --exclude '*_monitoring_alertmanager-*' \
+        --exclude '*_kube-system_traefik' \
+        "$storage/" "$dest/storage/"
+
+      # 3. The SQLite copies and the cluster token (needed to restore the datastore)
+      rsync -a --delete "$work/sqlite/" "$dest/sqlite/"
+      install -D -m 600 /var/lib/rancher/k3s/server/token "$dest/k3s/token"
+
+      rm -rf "$work"
+      date -Is > "$dest/LAST_SUCCESS"
+    '';
+  };
+  systemd.timers.pvc-backup = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "02:30";
+      Persistent = true;
+    };
+  };
+
   # never change
   system.stateVersion = "26.05";
 }
