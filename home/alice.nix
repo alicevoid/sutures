@@ -20,19 +20,24 @@
       enable = true;
       theme = "lambda";
     };
-    # pharika: pt = tmux session "main", pa = claude agent view
     shellAliases = {
-      pt = "ssh -t pharika tmux new -A -s main";
-      pa = "ssh -t pharika claude agents";
+      pt = "ssh pharika";
+      et = "ssh ephara";
     };
-    # Turn off mouse, focus, and kitty-keyboard modes for dropped SSH sessions
-    initContent = ''
-      _reset_term_modes() {
-        printf '\e[?1000l\e[?1002l\e[?1003l\e[?1005l\e[?1006l\e[?1015l\e[?1004l\e[<99u'
-      }
-      autoload -Uz add-zsh-hook
-      add-zsh-hook precmd _reset_term_modes
-    '';
+    initContent = lib.mkMerge [
+      (lib.mkBefore ''
+        if [[ -z $TMUX && -z $SSH_CONNECTION && -t 0 && -t 1 ]] && (( $+commands[tmux] )); then
+          tmux new -A -s main && exit
+        fi
+      '')
+      ''
+        _reset_term_modes() {
+          printf '\e[?1000l\e[?1002l\e[?1003l\e[?1005l\e[?1006l\e[?1015l\e[?1004l\e[<99u'
+        }
+        autoload -Uz add-zsh-hook
+        add-zsh-hook precmd _reset_term_modes
+      ''
+    ];
   };
 
   # tmux config settings
@@ -49,7 +54,7 @@
     extraConfig = ''
       # true color
       set -as terminal-features ",*:RGB"
-      # Shift+Enter = new line in the Claude prompt
+      # Shift+Enter = new line in Claude prompt
       set -s extended-keys on
       set -as terminal-features ",*:extkeys"
       # let Claude notifications and titles through

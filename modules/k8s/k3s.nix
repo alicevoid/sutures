@@ -46,6 +46,7 @@
     kubernetes-helm
     k9s
   ];
+  environment.shellAliases.k = "kubectl";
 
   # So standalone kubectl/k9s/helm find the cluster automatically.
   environment.variables.KUBECONFIG = "/etc/rancher/k3s/k3s.yaml";
