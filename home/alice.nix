@@ -22,6 +22,9 @@
       theme = "lambda";
     };
     localVariables.DISABLE_AUTO_TITLE = "true";
+    shellAliases = lib.mkIf (lib.elem osConfig.networking.hostName [ "pharika" ]) {
+      k = "kubectl";
+    };
     initContent = ''
       pt() { ssh -t pharika tmux new -A -s "''${1:-main}" }
       et() { ssh -t ephara tmux new -A -s "''${1:-main}" }
