@@ -14,6 +14,7 @@
   home.homeDirectory = "/home/alice";
   home.stateVersion = "25.05";
 
+  # zsh config settings
   programs.zsh = {
     enable = true;
     oh-my-zsh = {
@@ -68,8 +69,24 @@
     '';
   };
 
+  programs.git = {
+    enable = true;
+    ignores = [ "**/.claude/settings.local.json" ];
+    settings = {
+      user.name = "alicevoid";
+      user.email = "amelia.pvc@gmail.com";
+      pull.rebase = false;
+      merge = {
+        autoStash = true;
+        conflictStyle = "zdiff3";
+        tool = "nvimdiff";
+      };
+      mergetool.keepBackup = false;
+      alias.up = "!git pull --no-edit -X theirs; git diff --name-only --diff-filter=U | grep -q . && git mergetool";
+    };
+  };
+
   # Ghostty: desktops only
-  #   NOTE: Console look-alike, but with OSC 52 so tmux/nvim copies over ssh land locally
   programs.ghostty = lib.mkIf osConfig.services.desktopManager.gnome.enable {
     enable = true;
     settings = {
