@@ -24,16 +24,10 @@
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
-  fileSystems."/data" =
-    { device = "/dev/disk/by-uuid/25715651-c6a5-47bb-87ff-bed4e64abfa7";
-      fsType = "ext4";
-    };
-
   swapDevices = [ ];
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-  boot.swraid.enable = true;
 
 
 }

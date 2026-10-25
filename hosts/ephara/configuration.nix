@@ -49,23 +49,14 @@
     };
   };
 
-  # Mirror: mdadm RAID1 on the two 14 TB drives, ext4 at /data
-  #   nofail: a missing drive must never stop the boot (no boot = no SSH)
-  boot.swraid.enable = true;
-  boot.swraid.mdadmConf = ''
-    MAILADDR root
-    ARRAY /dev/md0 metadata=1.2 UUID=b53f7929:574d55d5:ed63dcb3:1b474e3c
-  '';
-  fileSystems."/data".options = [
-    "nofail"
-    "x-systemd.device-timeout=10s"
-  ];
-
   # ZFS: pool "tank" on the 14 TB drives (replaces the mdadm mirror)
   #   hostId: random, never change (ZFS uses it to tell which host owns a pool)
   boot.supportedFilesystems = [ "zfs" ];
   networking.hostId = "9bd9aba7";
   boot.zfs.forceImportRoot = false; # root is ext4; never force-import a pool another host used
+  #   Import tank at boot. Datasets mount through zfs-mount.service, not fstab, so a missing
+  #   pool never stops the boot (the nofail rule).
+  boot.zfs.extraPools = [ "tank" ];
   services.zfs.autoScrub.enable = true; # monthly
 
   # nscd: the resolvconf hook restarts it on every resolv.conf change. At boot NetworkManager
@@ -73,10 +64,56 @@
   #   stays down. Without nscd, DynamicUser services (matterjs-server) cannot look up their user.
   systemd.services.nscd.startLimitIntervalSec = 0;
 
+  # Folder layout on /data (MIGRATION Step 5): one folder per type of content, not per app.
+  #   media/ and downloads/ live in the same dataset (tank), so hard links and moves stay instant.
+  #   A service, not systemd.tmpfiles: tmpfiles runs before the pool mounts and would create the
+  #   folders on the root fs under the mountpoint.
+  systemd.services.data-layout = {
+    description = "Create the /data folder layout on the ZFS pool";
+    after = [ "zfs-mount.service" ];
+    wants = [ "zfs-mount.service" ];
+    wantedBy = [ "multi-user.target" ];
+    unitConfig = {
+      RequiresMountsFor = "/data";
+      ConditionPathIsMountPoint = "/data";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      for d in media media/movies media/shows media/music media/books media/audiobooks \
+               downloads downloads/incomplete downloads/complete; do
+        install -d -m 2775 -o root -g media "/data/$d"
+      done
+      chown alice:users /data/vaults
+    '';
+  };
+
   boot.kernelParams = [
     "ahci.mobile_lpm_policy=1" # SATA link power saving off (part of the 2026-10-23 link-drop fix)
     "zfs.zfs_arc_max=6442450944" # 6 GiB ARC cap, leaves RAM for k3s, HA and Jellyfin
   ];
+
+  # NFS server (NFSv4 only). Exports are datasets of the pool:
+  #   /data          athreos over Tailscale, whole pool (crossmnt: also the child datasets), root squashed
+  #   /data/shared   the cluster nodes, for csi-driver-nfs (no_root_squash: its controller makes and
+  #                  deletes PVC folders as root)
+  #   /data/backups/pharika   pharika only, for the nightly PVC backup (keeps file owners)
+  services.nfs.server = {
+    enable = true;
+    exports = ''
+      /data                  100.82.173.116(rw,sync,no_subtree_check,crossmnt,root_squash)
+      /data/shared           10.0.0.141(rw,sync,no_subtree_check,no_root_squash) 10.0.0.65(rw,sync,no_subtree_check,no_root_squash)
+      /data/backups/pharika  10.0.0.141(rw,sync,no_subtree_check,no_root_squash)
+    '';
+  };
+  services.nfs.settings.nfsd.vers3 = false;
+  # Export only when the pool is mounted. Otherwise it would export the empty folders on the root fs.
+  systemd.services.nfs-server = {
+    after = [ "zfs-mount.service" ];
+    unitConfig.ConditionPathIsMountPoint = "/data/shared";
+  };
 
   # Drive health
   services.smartd.enable = true;

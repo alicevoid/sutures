@@ -54,12 +54,17 @@
     isNormalUser = true;
     description = "alice";
     extraGroups = [
+      "media"
       "networkmanager"
       "wheel"
     ];
     packages = with pkgs; [ ];
     shell = pkgs.zsh;
   };
+
+  # Shared media group: same GID on every host, so files on ephara's /data keep their group
+  #   over NFS. Pods join it with supplementalGroups: [ 2000 ].
+  users.groups.media.gid = 2000;
 
   # Packages
   nixpkgs.config.allowUnfree = true;
