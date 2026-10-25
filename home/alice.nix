@@ -21,25 +21,29 @@
       enable = true;
       theme = "lambda";
     };
-    shellAliases = {
-      pt = "ssh pharika";
-      et = "ssh ephara";
-    };
-    initContent = lib.mkMerge [
-      (lib.mkBefore ''
-        if [[ -z $TMUX && -z $SSH_CONNECTION && -t 0 && -t 1 ]] && (( $+commands[tmux] )); then
-          tmux new -A -s main && exit
-        fi
-      '')
-      ''
-        _reset_term_modes() {
-          printf '\e[?1000l\e[?1002l\e[?1003l\e[?1005l\e[?1006l\e[?1015l\e[?1004l\e[<99u'
-        }
-        autoload -Uz add-zsh-hook
-        add-zsh-hook precmd _reset_term_modes
-      ''
-    ];
+    localVariables.DISABLE_AUTO_TITLE = "true";
+    initContent = ''
+      pt() { ssh -t pharika tmux new -A -s "''${1:-main}" }
+      et() { ssh -t ephara tmux new -A -s "''${1:-main}" }
+
+      _reset_term_modes() {
+        printf '\e[?1000l\e[?1002l\e[?1003l\e[?1005l\e[?1006l\e[?1015l\e[?1004l\e[<99u'
+      }
+      _title_idle() { print -Pn '\e]2;%m: zsh\a' }
+      _title_cmd() { print -n "\e]2;''${HOST%%.*}: ''${1%% *}\a" }
+      autoload -Uz add-zsh-hook
+      add-zsh-hook precmd _reset_term_modes
+      add-zsh-hook precmd _title_idle
+      add-zsh-hook preexec _title_cmd
+    '';
   };
+
+  # the nixpkgs build unpacks its specs from the working directory, so unpack from the package
+  home.packages = [ pkgs.inshellisense ];
+  home.activation.inshellisenseSpecs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    run rm -rf "${config.xdg.dataHome}/inshellisense"
+    (cd ${pkgs.inshellisense}/lib/node_modules/@microsoft/inshellisense && run ${pkgs.inshellisense}/bin/is init zsh >/dev/null)
+  '';
 
   # tmux config settings
   programs.tmux = {
@@ -66,6 +70,10 @@
       bind -T copy-mode-vi v   send -X begin-selection
       bind -T copy-mode-vi C-v send -X rectangle-toggle
       bind -T copy-mode-vi y   send -X copy-selection-and-cancel
+      set -g automatic-rename-format '#{pane_title}'
+      set -g set-titles on
+      set -g set-titles-string '#{pane_title}'
+      set -g status-right '#{host_short} %H:%M'
     '';
   };
 
