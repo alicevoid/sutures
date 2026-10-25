@@ -74,6 +74,7 @@
 
         ephara = mkSystem [
           ./modules/server.nix
+          ./modules/k8s/agent.nix
           ./hosts/ephara/configuration.nix
           ./hosts/ephara/hardware-configuration.nix
         ];
