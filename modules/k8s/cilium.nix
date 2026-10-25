@@ -27,23 +27,6 @@ in
 
   services.k3s.manifests.gateway-api-crds.source = gatewayApiCrds;
 
-  systemd.services.tailscale-src-valid-mark = {
-    after = [ "tailscaled.service" ];
-    partOf = [ "tailscaled.service" ];
-    wantedBy = [ "tailscaled.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
-    script = ''
-      for _ in $(seq 1 60); do
-        [ "$(cat /proc/sys/net/ipv4/conf/all/src_valid_mark)" = 1 ] && break
-        sleep 1
-      done
-      echo 0 > /proc/sys/net/ipv4/conf/all/src_valid_mark
-    '';
-  };
-
   services.k3s.autoDeployCharts.cilium = {
     repo = "https://helm.cilium.io";
     name = "cilium";

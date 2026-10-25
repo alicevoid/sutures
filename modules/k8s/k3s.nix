@@ -25,14 +25,6 @@
 
   # Firewall (disabled in server.nix; these rules apply if it is turned on)
   networking.firewall = {
-
-    # Trust the Cilium interfaces so pods can reach the API server and CoreDNS.
-    trustedInterfaces = [
-      "cilium_host"
-      "cilium_net"
-      "cilium_vxlan"
-      "lxc+"
-    ];
     allowedTCPPorts = [
       6443 # Kubernetes API server
       80 # Gateway API (Cilium Envoy, HTTP)

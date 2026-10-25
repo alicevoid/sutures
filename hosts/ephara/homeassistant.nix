@@ -102,7 +102,7 @@ in
   #   NOTE: matterjs, not python matter-server: 8.1.2 dies at startup parsing a DCL cert (2026-10-23)
   services.matterjs-server = {
     enable = true;
-    extraArgs = [ "--primary-interface=enp0s31f6" ]; # link-local IPv6 for Matter/Thread
+    extraArgs = [ "--primary-interface=br0" ]; # link-local IPv6 for Matter/Thread (br0 holds the LAN, see configuration.nix)
   };
 
   # Music Assistant (web UI on :8095), plays to Sonos, Cast and HA media players
