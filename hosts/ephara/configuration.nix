@@ -132,7 +132,7 @@
         hourly = 0;
         daily = 30;
         monthly = 12;
-        daily_hour = 4; # after pharika's 02:30 pvc-backup and the 03:00 HA copy
+        daily_hour = 4; # after pvc-backup (02:30), ephara-pvc-backup (02:45) and the HA copy (03:00)
         autosnap = true;
         autoprune = true;
       };
@@ -180,6 +180,60 @@
     wantedBy = [ "timers.target" ];
     timerConfig = {
       OnCalendar = "03:00";
+      Persistent = true;
+    };
+  };
+
+  # Nightly copy of ephara's k3s PVCs (local-path on the NVMe) to the pool (02:45).
+  #   Same method as pvc-backup on pharika: SQLite files get a consistent .backup copy first,
+  #   then the PVC folders are copied as they are. Skipped: caches (transcodes, images).
+  #   tank/backups/ephara is a child of tank/backups, so sanoid snapshots it at 04:00.
+  #   Restore: copy a PVC folder back with the app scaled to 0, or use the sqlite/ dump.
+  systemd.services.ephara-pvc-backup = {
+    description = "Copy ephara's k3s PVCs to /data/backups/ephara";
+    unitConfig = {
+      RequiresMountsFor = "/data/backups/ephara";
+      ConditionPathIsMountPoint = "/data/backups/ephara";
+    };
+    path = [
+      pkgs.rsync
+      pkgs.sqlite
+      pkgs.findutils
+      pkgs.coreutils
+    ];
+    serviceConfig.Type = "oneshot";
+    script = ''
+      set -euo pipefail
+      dest=/data/backups/ephara
+      work=/var/tmp/ephara-pvc-backup
+      storage=/var/lib/rancher/k3s/storage
+
+      # 1. Consistent copies of every SQLite database in the PVCs
+      rm -rf "$work"; mkdir -p "$work/sqlite"
+      find "$storage" -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) |
+        while read -r f; do
+          [ "$(head -c 15 "$f")" = "SQLite format 3" ] || continue
+          rel=''${f#"$storage"/}
+          mkdir -p "$work/sqlite/$(dirname "$rel")"
+          sqlite3 "$f" ".backup '$work/sqlite/$rel'"
+        done
+
+      # 2. The PVC folders, as they are
+      rsync -aH --numeric-ids --delete \
+        --exclude '*_jellyfin_jellyfin-cache' \
+        "$storage/" "$dest/storage/"
+
+      # 3. The SQLite copies
+      rsync -a --delete "$work/sqlite/" "$dest/sqlite/"
+
+      rm -rf "$work"
+      date -Is > "$dest/LAST_SUCCESS"
+    '';
+  };
+  systemd.timers.ephara-pvc-backup = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "02:45";
       Persistent = true;
     };
   };
