@@ -58,6 +58,12 @@
   #   pool never stops the boot (the nofail rule).
   boot.zfs.extraPools = [ "tank" ];
   services.zfs.autoScrub.enable = true; # monthly
+  #   Short by-id names for the NVMe ZFS partitions (/dev/disk/by-id/ephara-l2arc, ephara-slog).
+  #   The pool import scans only /dev/disk/by-id and keeps a stored path that it finds there,
+  #   so zpool status shows these names, not nvme-...-part4.
+  services.udev.extraRules = ''
+    ENV{ID_PART_ENTRY_NAME}=="ephara-l2arc|ephara-slog", SYMLINK+="disk/by-id/$env{ID_PART_ENTRY_NAME}"
+  '';
 
   # nscd: the resolvconf hook restarts it on every resolv.conf change. At boot NetworkManager
   #   and Tailscale rewrite that file several times in seconds, nscd hits the start limit and
