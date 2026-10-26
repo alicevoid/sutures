@@ -123,17 +123,11 @@
 
   # Snapshots (sanoid): read-only points in time. A delete or ransomware cannot reach older ones.
   #   tank itself (media, downloads) gets none: it can be downloaded again, and churn would fill them.
+  #   tank/vaults gets none: it is empty and reserved. The vault lives on pharika and is in pvc-backup.
   #   Browse: ls /data/<dataset>/.zfs/snapshot/   List: zfs list -t snapshot
   services.sanoid = {
     enable = true;
     templates = {
-      vault = {
-        hourly = 48;
-        daily = 30;
-        monthly = 6;
-        autosnap = true;
-        autoprune = true;
-      };
       backup = {
         hourly = 0;
         daily = 30;
@@ -151,7 +145,6 @@
       };
     };
     datasets = {
-      "tank/vaults".useTemplate = [ "vault" ];
       "tank/shared".useTemplate = [ "shared" ];
       "tank/backups" = {
         useTemplate = [ "backup" ];

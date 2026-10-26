@@ -22,6 +22,7 @@
   users.users.alice.openssh.authorizedKeys.keyFiles = [
     ./keys/athreos.pub
     ./keys/kunoros.pub
+    ./keys/ephara.pub # agents on ephara read the mindvirus vault over SSH
   ];
 
   users.users.alice.linger = true;
@@ -94,6 +95,7 @@
   #   SQLite files get a consistent .backup copy first. A raw copy of a live SQLite file can be torn.
   #   Skipped: prometheus, loki, alertmanager (metrics and logs, rolled over in days) and the old
   #   traefik PVC. Restore: copy a PVC folder back with the app scaled to 0, or use the sqlite/ dump.
+  #   Also copies /srv/vaults/mindvirus (the vault lives only on pharika; ephara reads it over SSH).
   boot.supportedFilesystems = [ "nfs" ];
   fileSystems."/mnt/ephara-backups" = {
     device = "10.0.0.65:/data/backups/pharika";
@@ -128,7 +130,8 @@
 
       # Never write to the local folder: the NFS mount must be there.
       ls "$dest" >/dev/null   # triggers the automount
-      [ "$(findmnt -no FSTYPE "$dest")" = nfs4 ] || { echo "$dest is not the NFS mount. Stop."; exit 1; }
+      #   -t nfs4: findmnt also lists the autofs mount on the same path
+      findmnt -n -t nfs4 --mountpoint "$dest" >/dev/null || { echo "$dest is not the NFS mount. Stop."; exit 1; }
 
       # 1. Consistent copies of every SQLite database (PVCs and the k3s datastore)
       rm -rf "$work"; mkdir -p "$work/sqlite"
@@ -151,6 +154,9 @@
       # 3. The SQLite copies and the cluster token (needed to restore the datastore)
       rsync -a --delete "$work/sqlite/" "$dest/sqlite/"
       install -D -m 600 /var/lib/rancher/k3s/server/token "$dest/k3s/token"
+
+      # 4. The mindvirus vault as plain Markdown (livesync-bridge's copy, easy to restore)
+      rsync -a --delete /srv/vaults/mindvirus/ "$dest/vaults/mindvirus/"
 
       rm -rf "$work"
       date -Is > "$dest/LAST_SUCCESS"
