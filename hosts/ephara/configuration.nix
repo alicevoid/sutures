@@ -70,7 +70,7 @@
   #   stays down. Without nscd, DynamicUser services (matterjs-server) cannot look up their user.
   systemd.services.nscd.startLimitIntervalSec = 0;
 
-  # Folder layout on /data (MIGRATION, "Storage reference"): one folder per type of content, not per app.
+  # Folder layout on /data (MIGRATION, "Storage reference", and JELLYFIN "Target layout").
   #   media/ and downloads/ live in the same dataset (tank), so hard links and moves stay instant.
   #   A service, not systemd.tmpfiles: tmpfiles runs before the pool mounts and would create the
   #   folders on the root fs under the mountpoint.
@@ -88,8 +88,10 @@
       RemainAfterExit = true;
     };
     script = ''
-      for d in media media/movies media/shows media/music media/books media/audiobooks \
-               downloads downloads/incomplete downloads/complete; do
+      #   media/watch: streamed media (Jellyfin). movies/ and shows/ are Radarr's and Sonarr's root
+      #   folders. anime/, oddities/ and extras/ are managed by hand and not listed here.
+      for d in media media/watch media/watch/movies media/watch/shows media/music media/books \
+               media/audiobooks downloads downloads/incomplete downloads/complete; do
         install -d -m 2775 -o root -g media "/data/$d"
       done
       chown alice:users /data/vaults
