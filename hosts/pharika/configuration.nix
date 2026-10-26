@@ -156,6 +156,7 @@
       install -D -m 600 /var/lib/rancher/k3s/server/token "$dest/k3s/token"
 
       # 4. The mindvirus vault as plain Markdown (livesync-bridge's copy, easy to restore)
+      mkdir -p "$dest/vaults"
       rsync -a --delete /srv/vaults/mindvirus/ "$dest/vaults/mindvirus/"
 
       rm -rf "$work"
