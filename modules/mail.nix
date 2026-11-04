@@ -18,7 +18,8 @@
       tls_starttls = true;
       user = "auth.pvc.tools";
       from = "no-reply@pvc.tools";
-      passwordeval = "cat /var/lib/secrets/msmtp-password";
+      # absolute path: smartd and ZED run the mailer with an almost empty PATH
+      passwordeval = "${pkgs.coreutils}/bin/cat /var/lib/secrets/msmtp-password";
     };
   };
 
