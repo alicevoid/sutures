@@ -9,9 +9,10 @@
 #   Single values: secrets/cluster/<name>.yaml (one entry per key).
 #   Whole files:   secrets/cluster/<name>.<key>.bin (sops binary, one opaque blob).
 #   Argo never touches Secrets. Removing one here does not delete it: kubectl delete it by hand.
+#   restart: rolled out when that Secret's content changes, for apps that read it only at start.
 
 let
-  # name -> { namespace; keys (single values); files (whole files); labels }
+  # name -> { namespace; keys (single values); files (whole files); labels; restart }
   k8sSecrets = {
     grafana-oauth = {
       namespace = "monitoring";
@@ -50,23 +51,10 @@ let
       namespace = "authelia";
       keys = [ "jwt-secret" "session-secret" "smtp-password" "storage-encryption-key" ];
       files = [ "oidc.yml" "users_database.yml" ];
+      restart = [ "deploy/authelia" ];
     };
   };
 
-  # Applied today. Each one moves here after its switch is verified.
-  migrated = [
-    "grafana-oauth"
-    "grafana-admin"
-    "karakeep-secrets"
-    "argocd-oidc"
-    "porkbun-api-credentials"
-    "couchdb-secrets"
-    "livesync-bridge-config"
-    "alertmanager-config"
-    "authelia-secrets"
-  ];
-
-  active = lib.filterAttrs (name: _: lib.elem name migrated) k8sSecrets;
   dir = ../../secrets/cluster;
   secretName = name: key: "k8s/${name}/${key}";
 
@@ -88,7 +76,7 @@ let
         };
       }) (s.files or [ ])
     )
-  ) active;
+  ) k8sSecrets;
 
   applyOne =
     name: s:
@@ -97,12 +85,22 @@ let
         key: "--from-file=${key}=${config.sops.secrets.${secretName name key}.path}"
       ) ((s.keys or [ ]) ++ (s.files or [ ]));
       labels = lib.concatStringsSep " " (lib.mapAttrsToList (k: v: "${k}=${v}") (s.labels or { }));
+      paths = map (key: config.sops.secrets.${secretName name key}.path) ((s.keys or [ ]) ++ (s.files or [ ]));
     in
     ''
       echo "applying ${s.namespace}/${name}"
       kubectl create secret generic ${name} -n ${s.namespace} ${fromFiles} --dry-run=client -o yaml \
         ${lib.optionalString (labels != "") "| kubectl label --local -f - ${labels} -o yaml"} \
         | kubectl apply --server-side --force-conflicts --field-manager=sops-nix -f -
+    ''
+    + lib.optionalString (s ? restart) ''
+      new=$(cat ${lib.concatStringsSep " " paths} | sha256sum | cut -d' ' -f1)
+      old=$(cat "$STATE_DIRECTORY/${name}" 2>/dev/null || true)
+      if [ -n "$old" ] && [ "$old" != "$new" ]; then
+        ${lib.concatMapStrings (d: "kubectl -n ${s.namespace} rollout restart ${d}
+") s.restart}
+      fi
+      echo "$new" > "$STATE_DIRECTORY/${name}"
     '';
 in
 {
@@ -121,11 +119,12 @@ in
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
+      StateDirectory = "k8s-secrets"; # last-applied hashes, for restart
     };
     script = ''
       set -euo pipefail
       for _ in $(seq 1 60); do kubectl get --raw /readyz >/dev/null 2>&1 && break; sleep 5; done
-      ${lib.concatStrings (lib.mapAttrsToList applyOne active)}
+      ${lib.concatStrings (lib.mapAttrsToList applyOne k8sSecrets)}
     '';
   };
 }
