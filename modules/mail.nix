@@ -13,7 +13,7 @@
     accounts.default = {
       host = "mail.smtp2go.com";
       port = 2525;
-      auth = true;
+      auth = "plain";
       tls = true;
       tls_starttls = true;
       user = "auth.pvc.tools";
