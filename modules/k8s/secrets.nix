@@ -63,6 +63,7 @@ let
     "couchdb-secrets"
     "livesync-bridge-config"
     "alertmanager-config"
+    "authelia-secrets"
   ];
 
   active = lib.filterAttrs (name: _: lib.elem name migrated) k8sSecrets;
