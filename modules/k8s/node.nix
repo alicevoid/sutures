@@ -1,12 +1,10 @@
 { ... }:
 
-# Every k3s node (server and agent): host settings that Cilium needs on each machine.
-#   Imported by default.nix (server, pharika) and agent.nix (agents, ephara).
+# Host settings that Cilium needs on every k3s node, server and agent.
 
 {
-  # Firewall (disabled in server.nix; this applies if it is turned on)
+  # The firewall is off (server.nix). If it is turned on, pods still reach the API server and CoreDNS.
   networking.firewall = {
-    # Trust the Cilium interfaces so pods can reach the API server and CoreDNS.
     trustedInterfaces = [
       "cilium_host"
       "cilium_net"
@@ -15,6 +13,9 @@
     ];
   };
 
+  # Tailscale sets src_valid_mark=1, and the kernel then drops Envoy's backend replies as
+  #   martians (every routed request times out). Reset it after each tailscaled start.
+  #   Remove when tailscale/tailscale#19796 is fixed.
   systemd.services.tailscale-src-valid-mark = {
     after = [ "tailscaled.service" ];
     partOf = [ "tailscaled.service" ];

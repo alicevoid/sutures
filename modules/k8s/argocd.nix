@@ -1,37 +1,29 @@
 { pkgs, ... }:
 
-# ArgoCD: the one app-layer thing Nix keeps.
-#   Bootstraps argo-cd (Helm) and declares the root app-of-apps Application pointing at the
-#   staples repo. From there Argo reconciles every workload from git, so the cluster stops
-#   drifting from its source of truth. Workloads live in staples,
-#   not here. Boundary: Nix owns the substrate (k3s, Cilium, this bootstrap);
-#   Argo owns the workloads + routes. One owner per resource.
+# ArgoCD bootstrap: the argo-cd chart and the root app-of-apps that points at staples.
+#   Nix owns the substrate (k3s, Cilium, this bootstrap). Argo owns every workload and route.
 
 let
   ns = "argocd";
   staplesRepo = "https://github.com/alicevoid/staples";
 in
 {
-  # argocd CLI for driving the cluster. Use --core (talks to the k8s API via KUBECONFIG, no
-  # server login). It needs the kube context namespace = argocd:
-  #   install -Dm600 /etc/rancher/k3s/k3s.yaml ~/.kube/config
-  #   export KUBECONFIG=$HOME/.kube/config && kubectl config set-context --current --namespace=argocd
+  # Use the CLI with --core (no server login). It needs the kube context namespace set to argocd.
   environment.systemPackages = [ pkgs.argocd ];
 
   services.k3s.autoDeployCharts.argo-cd = {
     repo = "https://argoproj.github.io/argo-helm";
     name = "argo-cd";
     version = "10.10.1"; # Argo CD v3.5.4
-    # Fixed-output hash: to bump, change version, set hash = "", rebuild, paste back what nix prints.
+    # To bump: change version, set hash = "", rebuild, paste the hash nix prints.
     hash = "sha256-Q9XSEoLJAHEAHBRRCIMfcf8Bcutd/htr0GE3QJ2PbF4=";
     targetNamespace = ns;
     createNamespace = true;
     values = {
-      # Release name is "argo-cd", so without this the chart doubles the prefix into
-      # "argo-cd-argocd-server". Pin the fullname to the conventional "argocd-server" etc.
+      # Without this the release name "argo-cd" doubles the prefix ("argo-cd-argocd-server").
       fullnameOverride = "argocd";
 
-      # Single-node homelab: skip the HA replicas, keep it lean.
+      # No HA replicas.
       redis-ha.enabled = false;
       controller.replicas = 1;
       server.replicas = 1;
@@ -50,10 +42,9 @@ in
           requestedScopes: [openid, profile, email, groups]
         '';
 
-        # The chart's default exclusions, minus EndpointSlice:
-        #   staples hand-writes EndpointSlices for backends outside the cluster (HA on ephara).
-        #   Safe: Argo tracks by annotation, and controller-made slices carry none, so it never claims them.
-        #   NOTE: on a chart bump, diff this against the chart's configs.cm."resource.exclusions".
+        # The chart's default exclusions minus EndpointSlice, because staples writes EndpointSlices
+        #   for backends outside the cluster (Home Assistant). Argo tracks by annotation, so it never
+        #   claims controller-made slices. On a chart bump, diff this against the chart's default.
         "resource.exclusions" = ''
           ### Endpoints stay excluded (control-plane made); EndpointSlice is managed for external backends
           - apiGroups:
@@ -118,10 +109,8 @@ in
     };
   };
 
-  # Root app-of-apps. Keep identical to staples/bootstrap/root.yaml; this addon is what applies
-  # it on the cluster (the single Nix -> Argo handoff). Argo then reconciles apps/ -> the rest.
-  # Self-heal on, prune off: a new file in apps/ spawns its child Application; removing one does
-  # not auto-delete it.
+  # Root app-of-apps. Keep identical to staples/bootstrap/root.yaml.
+  #   Prune is off: removing a file from apps/ does not delete its Application.
   services.k3s.manifests.argocd-root.content = {
     apiVersion = "argoproj.io/v1alpha1";
     kind = "Application";

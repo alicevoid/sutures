@@ -6,22 +6,19 @@
     ./homeassistant.nix
   ];
 
-  # host
   networking.hostName = "ephara";
 
-  # SSH keyFiles
   users.users.alice.openssh.authorizedKeys.keyFiles = [
     ./keys/athreos.pub
     ./keys/kunoros.pub
   ];
 
-  # keep alice's user manager up after logout, so background claude sessions + tmux live on
+  # keeps alice's user services (tmux, background agents) running after logout
   users.users.alice.linger = true;
 
-  # LAN bridge br0 (same shape as pharika, so Cilium's devices = [ "br0" ] fits both nodes)
-  #   NetworkManager owns it (not networking.interfaces): NM learns the Thread route
-  #   (Route Information in the Google TV's router advertisements) that Matter needs.
-  #   Same MAC as the NIC, so the router keeps giving out 10.0.0.65.
+  # LAN bridge br0, same name as on pharika so Cilium's devices = [ "br0" ] fits both nodes.
+  #   NetworkManager owns it because it learns the Thread route (from the Google TV's router
+  #   advertisements) that Matter needs. The NIC's MAC keeps the DHCP lease on 10.0.0.65.
   networking.networkmanager.ensureProfiles.profiles = {
     br0 = {
       connection = {
@@ -49,31 +46,28 @@
     };
   };
 
-  # ZFS: pool "tank", a mirror of the two 14 TB drives
-  #   hostId: random, never change (ZFS uses it to tell which host owns a pool)
+  # ZFS pool "tank": a mirror of the two 14 TB drives.
+  #   hostId is random. Never change it: ZFS uses it to tell which host owns a pool.
   boot.supportedFilesystems = [ "zfs" ];
   networking.hostId = "9bd9aba7";
   boot.zfs.forceImportRoot = false; # root is ext4; never force-import a pool another host used
-  #   Import tank at boot. Datasets mount through zfs-mount.service, not fstab, so a missing
-  #   pool never stops the boot (the nofail rule).
+  #   Datasets mount through zfs-mount.service, not fstab, so a missing pool never stops the boot.
   boot.zfs.extraPools = [ "tank" ];
   services.zfs.autoScrub.enable = true; # monthly
-  #   Short by-id names for the NVMe ZFS partitions (/dev/disk/by-id/ephara-l2arc, ephara-slog).
-  #   The pool import scans only /dev/disk/by-id and keeps a stored path that it finds there,
-  #   so zpool status shows these names, not nvme-...-part4.
+  #   Short by-id names for the NVMe cache partitions, so zpool status shows ephara-l2arc and
+  #   ephara-slog in place of nvme-...-part4.
   services.udev.extraRules = ''
     ENV{ID_PART_ENTRY_NAME}=="ephara-l2arc|ephara-slog", SYMLINK+="disk/by-id/$env{ID_PART_ENTRY_NAME}"
   '';
 
-  # nscd: the resolvconf hook restarts it on every resolv.conf change. At boot NetworkManager
-  #   and Tailscale rewrite that file several times in seconds, nscd hits the start limit and
-  #   stays down. Without nscd, DynamicUser services (matterjs-server) cannot look up their user.
+  # NetworkManager and Tailscale rewrite resolv.conf several times at boot, and each rewrite
+  #   restarts nscd. Without this, nscd hits the start limit and stays down, and DynamicUser
+  #   services (matterjs-server) cannot look up their user.
   systemd.services.nscd.startLimitIntervalSec = 0;
 
-  # Folder layout on /data (MIGRATION, "Storage reference", and JELLYFIN "Target layout").
-  #   media/ and downloads/ live in the same dataset (tank), so hard links and moves stay instant.
-  #   A service, not systemd.tmpfiles: tmpfiles runs before the pool mounts and would create the
-  #   folders on the root fs under the mountpoint.
+  # Folder layout on /data. media/ and downloads/ share one dataset, so hard links and moves
+  #   are instant. A service, because systemd.tmpfiles runs before the pool mounts and would
+  #   create the folders on the root fs.
   systemd.services.data-layout = {
     description = "Create the /data folder layout on the ZFS pool";
     after = [ "zfs-mount.service" ];
@@ -88,8 +82,7 @@
       RemainAfterExit = true;
     };
     script = ''
-      #   media/watch: streamed media (Jellyfin). movies/ and shows/ are Radarr's and Sonarr's root
-      #   folders. anime/, oddities/ and extras/ are managed by hand and not listed here.
+      # anime/, anime-movies/, oddities/ and extras/ under media/watch are made by hand.
       for d in media media/watch media/watch/movies media/watch/shows media/music media/books \
                media/audiobooks downloads downloads/incomplete downloads/complete; do
         install -d -m 2775 -o root -g media "/data/$d"
@@ -99,15 +92,17 @@
   };
 
   boot.kernelParams = [
-    "ahci.mobile_lpm_policy=1" # SATA link power saving off (part of the 2026-10-23 link-drop fix)
+    "ahci.mobile_lpm_policy=1" # SATA link power saving off; it caused link drops
     "zfs.zfs_arc_max=6442450944" # 6 GiB ARC cap, leaves RAM for k3s, HA and Jellyfin
+    # No simpledrm boot framebuffer. When i915 takes over, simpledrm can leave a dead
+    #   /dev/dri/by-path link that makes every container start fail ("mkdir ... file exists").
+    "initcall_blacklist=simpledrm_platform_driver_init"
   ];
 
-  # NFS server (NFSv4 only). Exports are datasets of the pool:
-  #   /data          athreos over Tailscale, whole pool (crossmnt: also the child datasets), root squashed
-  #   /data/shared   the cluster nodes, for csi-driver-nfs (no_root_squash: its controller makes and
-  #                  deletes PVC folders as root)
-  #   /data/backups/pharika   pharika only, for the nightly PVC backup (keeps file owners)
+  # NFSv4 exports:
+  #   /data                  athreos over Tailscale, root squashed
+  #   /data/shared           the cluster nodes; no_root_squash because csi-driver-nfs makes PVC folders as root
+  #   /data/backups/pharika  pharika's pvc-backup; no_root_squash keeps file owners
   services.nfs.server = {
     enable = true;
     exports = ''
@@ -117,16 +112,14 @@
     '';
   };
   services.nfs.settings.nfsd.vers3 = false;
-  # Export only when the pool is mounted. Otherwise it would export the empty folders on the root fs.
+  # Export only when the pool is mounted, never the empty folders on the root fs.
   systemd.services.nfs-server = {
     after = [ "zfs-mount.service" ];
     unitConfig.ConditionPathIsMountPoint = "/data/shared";
   };
 
-  # Snapshots (sanoid): read-only points in time. A delete or ransomware cannot reach older ones.
-  #   tank itself (media, downloads) gets none: it can be downloaded again, and churn would fill them.
-  #   tank/vaults gets none: it is empty and reserved. The vault lives on pharika and is in pvc-backup.
-  #   Browse: ls /data/<dataset>/.zfs/snapshot/   List: zfs list -t snapshot
+  # Snapshots. tank itself (media, downloads) gets none: it can be downloaded again, and the
+  #   churn would fill them. Browse: ls /data/<dataset>/.zfs/snapshot/
   services.sanoid = {
     enable = true;
     templates = {
@@ -134,7 +127,7 @@
         hourly = 0;
         daily = 30;
         monthly = 12;
-        daily_hour = 4; # after pvc-backup (02:30), ephara-pvc-backup (02:45) and the HA copy (03:00)
+        daily_hour = 4; # after the 02:30, 02:45 and 03:00 backups
         autosnap = true;
         autoprune = true;
       };
@@ -155,9 +148,8 @@
     };
   };
 
-  # Nightly copy of Home Assistant's state to the pool (03:00).
-  #   The recorder database gets a consistent SQLite .backup copy. A raw copy of a live SQLite file
-  #   can be torn. The rest is a plain rsync. sanoid snapshots tank/backups at 04:00.
+  # Home Assistant state to the pool. The recorder database gets a SQLite .backup copy,
+  #   because a raw copy of a live SQLite file can be torn.
   systemd.services.hass-backup = {
     description = "Copy Home Assistant state to /data/backups/homeassistant";
     unitConfig = {
@@ -186,10 +178,7 @@
     };
   };
 
-  # Nightly copy of ephara's k3s PVCs (local-path on the NVMe) to the pool (02:45).
-  #   Same method as pvc-backup on pharika: SQLite files get a consistent .backup copy first,
-  #   then the PVC folders are copied as they are. Skipped: caches (transcodes, images).
-  #   tank/backups/ephara is a child of tank/backups, so sanoid snapshots it at 04:00.
+  # ephara's k3s PVCs to the pool, the same method as pvc-backup on pharika.
   #   Restore: copy a PVC folder back with the app scaled to 0, or use the sqlite/ dump.
   systemd.services.ephara-pvc-backup = {
     description = "Copy ephara's k3s PVCs to /data/backups/ephara";
@@ -210,7 +199,7 @@
       work=/var/tmp/ephara-pvc-backup
       storage=/var/lib/rancher/k3s/storage
 
-      # 1. Consistent copies of every SQLite database in the PVCs
+      # 1. SQLite copies
       rm -rf "$work"; mkdir -p "$work/sqlite"
       find "$storage" -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) |
         while read -r f; do
@@ -220,12 +209,12 @@
           sqlite3 "$f" ".backup '$work/sqlite/$rel'"
         done
 
-      # 2. The PVC folders, as they are
+      # 2. PVC folders (not the Jellyfin cache)
       rsync -aH --numeric-ids --delete \
         --exclude '*_jellyfin_jellyfin-cache' \
         "$storage/" "$dest/storage/"
 
-      # 3. The SQLite copies
+      # 3. SQLite copies into place
       rsync -a --delete "$work/sqlite/" "$dest/sqlite/"
 
       rm -rf "$work"
@@ -240,11 +229,10 @@
     };
   };
 
-  # Drive health
   services.smartd.enable = true;
 
   environment.systemPackages = with pkgs; [
-    nvme-cli # NVMe temperatures and throttle counters (health-check.sh)
+    nvme-cli
     smartmontools
     wget
   ];

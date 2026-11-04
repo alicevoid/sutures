@@ -1,7 +1,6 @@
 { pkgs, ... }:
 
-# Cilium: CNI, kube-proxy replacement, and the Gateway API implementation.
-#   Replaces flannel, servicelb and Traefik (disabled in k3s.nix). Routes live in staples.
+# Cilium: CNI, kube-proxy replacement, and the Gateway API implementation. Routes live in staples.
 
 let
   gatewayApiVersion = "v1.6.3";
