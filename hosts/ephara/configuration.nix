@@ -249,8 +249,6 @@
       sender = "no-reply@pvc.tools";
       mailer = "${pkgs.msmtp}/bin/msmtp";
     };
-    # Sends a test mail at each smartd start. Remove after the first switch.
-    notifications.test = true;
   };
 
   environment.systemPackages = with pkgs; [
