@@ -54,7 +54,16 @@ let
   };
 
   # Applied today. Each one moves here after its switch is verified.
-  migrated = [ "grafana-oauth" ];
+  migrated = [
+    "grafana-oauth"
+    "grafana-admin"
+    "karakeep-secrets"
+    "argocd-oidc"
+    "porkbun-api-credentials"
+    "couchdb-secrets"
+    "livesync-bridge-config"
+    "alertmanager-config"
+  ];
 
   active = lib.filterAttrs (name: _: lib.elem name migrated) k8sSecrets;
   dir = ../../secrets/cluster;
