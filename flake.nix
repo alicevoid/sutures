@@ -11,6 +11,11 @@
 
     nixvim.url = "github:nix-community/nixvim/nixos-26.05";
 
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
   outputs =
@@ -19,6 +24,7 @@
       nixpkgs,
       home-manager,
       nixvim,
+      sops-nix,
     }@inputs:
     let
       system = "x86_64-linux";
@@ -67,6 +73,8 @@
 
         pharika = mkSystem [
           ./modules/server.nix
+          sops-nix.nixosModules.sops
+          ./modules/secrets.nix
           ./modules/mail.nix
           ./modules/k8s 
           ./hosts/pharika/configuration.nix
@@ -75,6 +83,8 @@
 
         ephara = mkSystem [
           ./modules/server.nix
+          sops-nix.nixosModules.sops
+          ./modules/secrets.nix
           ./modules/mail.nix
           ./modules/k8s/agent.nix
           ./hosts/ephara/configuration.nix

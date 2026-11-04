@@ -1,15 +1,17 @@
 { config, pkgs, ... }:
 
 # Outgoing mail through SMTP2GO, for alerts. Every sender mails "root"; the aliases file maps it to
-#   a real address, so the address stays out of this public repo. Both files are root-only (0600)
-#   and made by hand until SOPS.
+#   a real address, so the address stays out of this public repo. Both come from secrets/hosts.yaml.
 #   Failure mails: add  onFailure = [ "notify-failure@%n.service" ];  to a unit.
 
 {
+  sops.secrets.msmtp-password = { };
+  sops.secrets.mail-aliases = { };
+
   programs.msmtp = {
     enable = true;
     setSendmail = true;
-    defaults.aliases = "/var/lib/secrets/mail-aliases";
+    defaults.aliases = config.sops.secrets.mail-aliases.path;
     accounts.default = {
       host = "mail.smtp2go.com";
       port = 2525;
@@ -19,7 +21,7 @@
       user = "auth.pvc.tools";
       from = "no-reply@pvc.tools";
       # absolute path: smartd and ZED run the mailer with an almost empty PATH
-      passwordeval = "${pkgs.coreutils}/bin/cat /var/lib/secrets/msmtp-password";
+      passwordeval = "${pkgs.coreutils}/bin/cat ${config.sops.secrets.msmtp-password.path}";
     };
   };
 

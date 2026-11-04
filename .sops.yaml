@@ -1,0 +1,23 @@
+# Who can open which secrets file. Alice's key opens everything; each host opens only its own.
+#   Host keys are the hosts' SSH host keys converted with ssh-to-age.
+#   After changing a key here: sops updatekeys <file>
+keys:
+  - &alice age19855p9pk6kuffdvcjw5dqul83u6jfyp28qw4qk2pm4lpt59v3yuqkfwchw
+  - &pharika age13zxhj3jel9wmtdgyr2sj9p5wuermkxwhp0sg90rdgtsxtqvruq8st6nkxj
+  - &ephara age1svun6n0cu08g46sxefgltnfh95qj9nfdurxfe8pu208yhltzm3rqnu6w88
+
+creation_rules:
+  # shared by both servers (mail)
+  - path_regex: secrets/hosts\.yaml$
+    key_groups:
+      - age: [*alice, *pharika, *ephara]
+  - path_regex: secrets/pharika\.yaml$
+    key_groups:
+      - age: [*alice, *pharika]
+  - path_regex: secrets/ephara\.yaml$
+    key_groups:
+      - age: [*alice, *ephara]
+  # Kubernetes Secrets, applied by pharika
+  - path_regex: secrets/cluster/.*$
+    key_groups:
+      - age: [*alice, *pharika]
