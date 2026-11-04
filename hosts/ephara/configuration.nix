@@ -11,6 +11,7 @@
   users.users.alice.openssh.authorizedKeys.keyFiles = [
     ./keys/athreos.pub
     ./keys/kunoros.pub
+    ./keys/pharika.pub # agents on pharika run checks on ephara
   ];
 
   # keeps alice's user services (tmux, background agents) running after logout
@@ -54,6 +55,15 @@
   #   Datasets mount through zfs-mount.service, not fstab, so a missing pool never stops the boot.
   boot.zfs.extraPools = [ "tank" ];
   services.zfs.autoScrub.enable = true; # monthly
+  # Mail on pool events. Verbose also mails a clean scrub, which proves the route each month.
+  services.zfs.zed.enableMail = true;
+  services.zfs.zed.settings = {
+    ZED_EMAIL_ADDR = [ "root" ];
+    ZED_EMAIL_PROG = "${pkgs.msmtp}/bin/msmtp";
+    ZED_EMAIL_OPTS = "@ADDRESS@";
+    ZED_NOTIFY_INTERVAL_SECS = 3600;
+    ZED_NOTIFY_VERBOSE = true;
+  };
   #   Short by-id names for the NVMe cache partitions, so zpool status shows ephara-l2arc and
   #   ephara-slog in place of nvme-...-part4.
   services.udev.extraRules = ''
@@ -152,6 +162,7 @@
   #   because a raw copy of a live SQLite file can be torn.
   systemd.services.hass-backup = {
     description = "Copy Home Assistant state to /data/backups/homeassistant";
+    onFailure = [ "notify-failure@%n.service" ];
     unitConfig = {
       RequiresMountsFor = "/data/backups/homeassistant";
       ConditionPathIsMountPoint = "/data/backups/homeassistant";
@@ -182,6 +193,7 @@
   #   Restore: copy a PVC folder back with the app scaled to 0, or use the sqlite/ dump.
   systemd.services.ephara-pvc-backup = {
     description = "Copy ephara's k3s PVCs to /data/backups/ephara";
+    onFailure = [ "notify-failure@%n.service" ];
     unitConfig = {
       RequiresMountsFor = "/data/backups/ephara";
       ConditionPathIsMountPoint = "/data/backups/ephara";
@@ -229,7 +241,17 @@
     };
   };
 
-  services.smartd.enable = true;
+  services.smartd = {
+    enable = true;
+    notifications.mail = {
+      enable = true;
+      recipient = "root";
+      sender = "no-reply@pvc.tools";
+      mailer = "${pkgs.msmtp}/bin/msmtp";
+    };
+    # Sends a test mail at each smartd start. Remove after the first switch.
+    notifications.test = true;
+  };
 
   environment.systemPackages = with pkgs; [
     nvme-cli

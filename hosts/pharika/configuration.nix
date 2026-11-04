@@ -98,6 +98,7 @@
 
   systemd.services.pvc-backup = {
     description = "Back up k3s PVCs and cluster state to ephara";
+    onFailure = [ "notify-failure@%n.service" ];
     path = [
       pkgs.rsync
       pkgs.sqlite
