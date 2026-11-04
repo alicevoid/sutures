@@ -63,9 +63,12 @@
   };
 
   environment.systemPackages = with pkgs; [
+    age # secrets: age-keygen, and the key type sops uses
     filezilla
     grim
     obsidian
+    sops # edit the encrypted files in sutures/secrets
+    ssh-to-age # turn a host's SSH key into its age key
     vscode
     wireshark
     wl-clipboard
