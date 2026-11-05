@@ -243,9 +243,8 @@
     };
   };
 
-  # Nightly check of new library files. Partial and zero-filled files have sat in the library
-  #   unnoticed before. ctime, not mtime: a hard link from an import updates ctime, while the
-  #   mtime can be the release's. Exit 1 on any bad file, so notify-failure mails the list.
+  # Nightly decode check of new library files (partial and zero-filled files slipped in before).
+  #   ctime, not mtime: an import's hard link updates ctime. A bad file fails the unit, so it mails.
   systemd.services.media-check = {
     description = "Check new files in /data/media/watch for read and decode errors";
     onFailure = [ "notify-failure@%n.service" ];
@@ -269,8 +268,7 @@
       checked=0
       while IFS= read -r -d "" f; do
         checked=$((checked + 1))
-        # 1. demux every byte (truncated files); 2. decode the first and last 30 s (zero-filled
-        #   or corrupt streams). -map -0:t skips attachments (fonts in anime mkv files).
+        # Demux every byte, then decode the first and last 30 s. -map -0:t skips attachments (fonts).
         err=$(
           ffmpeg -v error -nostdin -i "$f" -map 0 -map -0:t -c copy -f null - 2>&1
           ffmpeg -v error -nostdin -t 30 -i "$f" -f null - 2>&1
