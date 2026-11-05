@@ -14,6 +14,11 @@
 let
   # name -> { namespace; keys (single values); files (whole files); labels; restart }
   k8sSecrets = {
+    gluetun-pia = {
+      namespace = "downloads"; # made by the Argo app downloads; must exist before this unit runs
+      keys = [ "username" "password" ];
+      restart = [ "deploy/qbit-public" ]; # gluetun reads the login only at start
+    };
     grafana-oauth = {
       namespace = "monitoring";
       keys = [ "client-secret" ];

@@ -75,9 +75,9 @@
   #   services (matterjs-server) cannot look up their user.
   systemd.services.nscd.startLimitIntervalSec = 0;
 
-  # Folder layout on /data. media/ and downloads/ share one dataset, so hard links and moves
-  #   are instant. A service, because systemd.tmpfiles runs before the pool mounts and would
-  #   create the folders on the root fs.
+  # Folder layout on /data. media/watch/ and media/downloads/ share one dataset, so hard links
+  #   and moves are instant. A service, because systemd.tmpfiles runs before the pool mounts
+  #   and would create the folders on the root fs.
   systemd.services.data-layout = {
     description = "Create the /data folder layout on the ZFS pool";
     after = [ "zfs-mount.service" ];
@@ -94,7 +94,8 @@
     script = ''
       # anime/, anime-movies/, oddities/ and extras/ under media/watch are made by hand.
       for d in media media/watch media/watch/movies media/watch/shows media/music media/books \
-               media/audiobooks downloads downloads/incomplete downloads/complete; do
+               media/audiobooks media/downloads media/downloads/public media/downloads/tracker \
+               media/downloads/own; do
         install -d -m 2775 -o root -g media "/data/$d"
       done
       chown alice:users /data/vaults
@@ -221,9 +222,10 @@
           sqlite3 "$f" ".backup '$work/sqlite/$rel'"
         done
 
-      # 2. PVC folders (not the Jellyfin cache)
+      # 2. PVC folders (not the Jellyfin cache or incomplete downloads)
       rsync -aH --numeric-ids --delete \
         --exclude '*_jellyfin_jellyfin-cache' \
+        --exclude '*_downloads_incomplete' \
         "$storage/" "$dest/storage/"
 
       # 3. SQLite copies into place
@@ -237,6 +239,59 @@
     wantedBy = [ "timers.target" ];
     timerConfig = {
       OnCalendar = "02:45";
+      Persistent = true;
+    };
+  };
+
+  # Nightly check of new library files. Partial and zero-filled files have sat in the library
+  #   unnoticed before. ctime, not mtime: a hard link from an import updates ctime, while the
+  #   mtime can be the release's. Exit 1 on any bad file, so notify-failure mails the list.
+  systemd.services.media-check = {
+    description = "Check new files in /data/media/watch for read and decode errors";
+    onFailure = [ "notify-failure@%n.service" ];
+    unitConfig = {
+      RequiresMountsFor = "/data";
+      ConditionPathIsMountPoint = "/data";
+    };
+    path = [
+      pkgs.ffmpeg-headless
+      pkgs.findutils
+      pkgs.coreutils
+    ];
+    serviceConfig = {
+      Type = "oneshot";
+      Nice = 19;
+      IOSchedulingClass = "idle";
+    };
+    script = ''
+      set -uo pipefail
+      bad=0
+      checked=0
+      while IFS= read -r -d "" f; do
+        checked=$((checked + 1))
+        # 1. demux every byte (truncated files); 2. decode the first and last 30 s (zero-filled
+        #   or corrupt streams). -map -0:t skips attachments (fonts in anime mkv files).
+        err=$(
+          ffmpeg -v error -nostdin -i "$f" -map 0 -map -0:t -c copy -f null - 2>&1
+          ffmpeg -v error -nostdin -t 30 -i "$f" -f null - 2>&1
+          ffmpeg -v error -nostdin -sseof -30 -i "$f" -f null - 2>&1
+        )
+        if [ -n "$err" ]; then
+          bad=$((bad + 1))
+          echo "BAD: $f"
+          printf '%s\n' "$err" | head -n 5 | sed 's/^/    /'
+        fi
+      done < <(find /data/media/watch -path /data/media/watch/.recycle -prune -o -type f \
+        \( -iname '*.mkv' -o -iname '*.mp4' -o -iname '*.m4v' -o -iname '*.avi' -o -iname '*.ts' \) \
+        -cmin -1560 -print0)
+      echo "checked $checked files, $bad bad"
+      [ "$bad" -eq 0 ]
+    '';
+  };
+  systemd.timers.media-check = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "05:00"; # after the backups and sanoid (04:00)
       Persistent = true;
     };
   };
