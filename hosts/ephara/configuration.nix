@@ -269,10 +269,13 @@
       while IFS= read -r -d "" f; do
         checked=$((checked + 1))
         # Demux every byte, then decode the first and last 30 s. -map -0:t skips attachments (fonts).
+        # The null muxer's "non monotonically increasing dts" is a timestamp warning, not damage.
         err=$(
-          ffmpeg -v error -nostdin -i "$f" -map 0 -map -0:t -c copy -f null - 2>&1
-          ffmpeg -v error -nostdin -t 30 -i "$f" -f null - 2>&1
-          ffmpeg -v error -nostdin -sseof -30 -i "$f" -f null - 2>&1
+          {
+            ffmpeg -v error -nostdin -i "$f" -map 0 -map -0:t -c copy -f null -
+            ffmpeg -v error -nostdin -t 30 -i "$f" -f null -
+            ffmpeg -v error -nostdin -sseof -30 -i "$f" -f null -
+          } 2>&1 | grep -v 'non monotonically increasing dts'
         )
         if [ -n "$err" ]; then
           bad=$((bad + 1))
