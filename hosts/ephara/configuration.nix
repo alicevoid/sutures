@@ -47,6 +47,9 @@
     };
   };
 
+  # Tailscale SSH enable
+  services.tailscale.extraSetFlags = [ "--ssh" ];
+
   # ZFS pool "tank": a mirror of the two 14 TB drives.
   #   hostId is random. Never change it: ZFS uses it to tell which host owns a pool.
   boot.supportedFilesystems = [ "zfs" ];
