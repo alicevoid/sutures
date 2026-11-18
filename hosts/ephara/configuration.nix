@@ -107,7 +107,7 @@
 
   boot.kernelParams = [
     "ahci.mobile_lpm_policy=1" # SATA link power saving off; it caused link drops
-    "zfs.zfs_arc_max=6442450944" # 6 GiB ARC cap, leaves RAM for k3s, HA and Jellyfin
+    "zfs.zfs_arc_max=12884901888" # 12 GiB ARC cap, leaves RAM for k3s, HA and Jellyfin
     # No simpledrm boot framebuffer. When i915 takes over, simpledrm can leave a dead
     #   /dev/dri/by-path link that makes every container start fail ("mkdir ... file exists").
     "initcall_blacklist=simpledrm_platform_driver_init"
@@ -301,6 +301,12 @@
 
   services.smartd = {
     enable = true;
+    autodetect = false;
+    devices = [
+      { device = "/dev/disk/by-id/ata-WDC_WUH721414ALE6L4_Y5KVJ99C"; }
+      { device = "/dev/disk/by-id/ata-WDC_WUH721414ALE6L4_XHG7VA2H"; }
+      { device = "/dev/disk/by-id/nvme-CT2000P3PSSD8_2412E8A12877"; }
+    ];
     notifications.mail = {
       enable = true;
       recipient = "root";
