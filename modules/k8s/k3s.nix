@@ -34,6 +34,35 @@
     kubectl
     kubernetes-helm
     k9s
+    (writeShellApplication {
+      name = "maint-on";
+      runtimeInputs = [ kubectl ];
+      text = ''
+        kubectl -n monitoring exec alertmanager-kube-prometheus-stack-alertmanager-0 -c alertmanager -- \
+          amtool silence add 'alertname=~".+"' 'alertname!="Watchdog"' \
+          --duration="''${1:-2h}" --author=alice --comment=maintenance \
+          --alertmanager.url=http://localhost:9093
+      '';
+    })
+    (writeShellApplication {
+      name = "maint-off";
+      runtimeInputs = [ kubectl jq ];
+      text = ''
+        am() {
+          kubectl -n monitoring exec alertmanager-kube-prometheus-stack-alertmanager-0 -c alertmanager -- \
+            amtool "$@" --alertmanager.url=http://localhost:9093
+        }
+        ids=$(am silence query -o json | jq -r '.[] | select(.comment == "maintenance") | .id')
+        if [ -z "$ids" ]; then
+          echo "no maintenance silence"
+          exit 0
+        fi
+        while read -r id; do
+          am silence expire "$id"
+          echo "expired $id"
+        done <<< "$ids"
+      '';
+    })
   ];
   environment.shellAliases.k = "kubectl";
 

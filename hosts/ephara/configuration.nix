@@ -277,7 +277,7 @@
             ffmpeg -v error -nostdin -i "$f" -map 0 -map -0:t -c copy -f null -
             ffmpeg -v error -nostdin -t 30 -i "$f" -f null -
             ffmpeg -v error -nostdin -sseof -30 -i "$f" -f null -
-          } 2>&1
+          } 2>&1 || true
         )
         if [ -n "$err" ]; then
           bad=$((bad + 1))
