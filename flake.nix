@@ -67,6 +67,7 @@
         athreOS = mkSystem [
           ./modules/laptop.nix
           ./profiles/gaming.nix
+          ./modules/printing.nix
           ./hosts/athreos/configuration.nix
           ./hosts/athreos/hardware-configuration.nix
         ];
@@ -87,6 +88,7 @@
           ./modules/secrets.nix
           ./modules/mail.nix
           ./modules/k8s/agent.nix
+          ./modules/printing.nix
           ./hosts/ephara/configuration.nix
           ./hosts/ephara/hardware-configuration.nix
         ];
