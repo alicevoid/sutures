@@ -23,8 +23,10 @@
       Restart = "on-failure";
       RestartSec = "5min";
     };
+    # The generated PPD defaults InputSlot to Main, which pins every job to Cassette 1.
+    # Auto lets the printer match the tray by media size.
     script = ''
-      lpadmin -p WF-7840 -E -L home -m everywhere -v ipp://10.0.0.195/ipp/print
+      lpadmin -p WF-7840 -E -L home -m everywhere -v ipp://10.0.0.195/ipp/print -o InputSlot=Auto
     '';
   };
 }
