@@ -3,7 +3,9 @@
 # Host settings that Cilium needs on every k3s node, server and agent.
 
 {
-  # Pods reach the host through the trusted Cilium interfaces.
+  # Pods reach the host through the trusted Cilium interfaces. The nftables wildcard is "*"
+  #   ("lxc+" is iptables syntax and matches nothing). Envoy's replies are NOTRACK, so pod packets
+  #   to the Gateway look "invalid" to conntrack and must be accepted by interface first.
   #   Cluster ports accept only the nodes and the pod CIDR: VXLAN, Cilium health, Hubble,
   #   node-exporter, Cilium and Envoy metrics, kubelet.
   networking.firewall = {
@@ -11,7 +13,7 @@
       "cilium_host"
       "cilium_net"
       "cilium_vxlan"
-      "lxc+"
+      "lxc*"
     ];
     # Cilium marks Gateway traffic 0x200 for Envoy, and that mark routes to a table with only a
     #   local route, so the reverse-path check drops it.
