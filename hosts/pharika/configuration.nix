@@ -76,6 +76,11 @@
   };
   networking.nameservers = [ "10.0.0.1" ];
   networking.dhcpcd.extraConfig = "clientid";
+  # Wired only. The Wi-Fi card stays off, so pharika has one address and one default route.
+  boot.blacklistedKernelModules = [
+    "iwlwifi"
+    "iwlmvm"
+  ];
 
   # Nightly backup to ephara's pool: PVCs, the k3s datastore and token, and the mindvirus vault.
   #   SQLite files get a .backup copy first, because a raw copy of a live SQLite file can be torn.

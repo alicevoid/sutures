@@ -26,6 +26,7 @@ let
     grafana-admin = {
       namespace = "monitoring";
       keys = [ "admin-user" "admin-password" ];
+      restart = [ "deploy/kube-prometheus-stack-grafana" ]; # the sidecars read the login only at start
     };
     karakeep-secrets = {
       namespace = "karakeep";
