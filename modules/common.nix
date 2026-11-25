@@ -101,6 +101,14 @@
     "emSign Root CA - C1"
   ];
 
+  # nginx2root (Nov 2026): an unpatched SCTP use-after-free gives root and container escape.
+  #   Nothing here uses SCTP (Cilium enable-sctp is false). "install" also stops an explicit modprobe.
+  #   TODO: Remove when the kernel fix lands. https://xint.io/blog/nginx2root-remote-code-execution
+  boot.blacklistedKernelModules = [ "sctp" ];
+  boot.extraModprobeConfig = ''
+    install sctp ${pkgs.coreutils}/bin/false
+  '';
+
   # Zsh
   programs.zsh.enable = true;
 
