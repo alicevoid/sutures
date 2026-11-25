@@ -50,6 +50,30 @@
   # Tailscale SSH enable
   services.tailscale.extraSetFlags = [ "--ssh" ];
 
+  # Firewall (nftables). LAN services here; cluster ports are in node.nix.
+  #   The ephemeral range is open on br0 because matterjs picks a random Matter port at each
+  #   start (no option to pin it), and HA binds random UDP ports for discovery. Every sensitive
+  #   port (NFS, VXLAN, metrics, kubelet, statd) sits below the range.
+  networking.firewall.enable = true;
+  networking.nftables.enable = true;
+  networking.firewall.interfaces.br0 = {
+    allowedTCPPorts = [
+      8123 # Home Assistant
+      1400 # HA Sonos callbacks
+      8095 # Music Assistant UI
+      8097 # Music Assistant streams
+      8927 # Music Assistant players
+    ];
+    allowedUDPPorts = [ 1900 ]; # SSDP
+    allowedTCPPortRanges = [ { from = 32768; to = 60999; } ];
+    allowedUDPPortRanges = [ { from = 32768; to = 60999; } ];
+  };
+  # NFS is v4.2 only (one port); pharika mounts the backups share, athreos comes over the tailnet.
+  networking.firewall.extraInputRules = ''
+    ip saddr 10.0.0.141 tcp dport 2049 accept
+  '';
+  networking.firewall.logRefusedPackets = true; # for the first weeks, to catch missed UDP ports
+
   # ZFS pool "tank": a mirror of the two 14 TB drives.
   #   hostId is random. Never change it: ZFS uses it to tell which host owns a pool.
   boot.supportedFilesystems = [ "zfs" ];
@@ -126,6 +150,8 @@
     '';
   };
   services.nfs.settings.nfsd.vers3 = false;
+  # statd still starts; a fixed port keeps it out of the ephemeral range the firewall opens.
+  services.nfs.server.statdPort = 4000;
   # Export only when the pool is mounted, never the empty folders on the root fs.
   systemd.services.nfs-server = {
     after = [ "zfs-mount.service" ];
