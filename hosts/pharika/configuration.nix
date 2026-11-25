@@ -26,8 +26,8 @@
         "9.9.9.9"
       ];
       no-resolv = true;
-      # bind-dynamic: binds when the interface comes up
       interface = "br0";
+      # br0 can come up after dnsmasq starts; bind-dynamic binds to it when it appears.
       bind-dynamic = true;
       domain-needed = true;
       bogus-priv = true;

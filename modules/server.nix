@@ -10,7 +10,6 @@
 #   ...WARNING: this is a BAD IDEA ZONE! brought2u by yours truly
 
 {
-  # SSH
   services.openssh = {
     enable = true;
     settings = {
@@ -33,9 +32,7 @@
   networking.nftables.flushRuleset = false;
   services.tailscale.openFirewall = true;
 
-  # mDNS publishing:
-  #   NOTE: This is enabled already (see common.nix)
-
+  # Avahi is enabled in common.nix. Servers also publish their address.
   services.avahi = {
     openFirewall = true;
     publish = {
@@ -44,13 +41,11 @@
     };
   };
 
-  # Console 
   console = {
     font = "Lat2-Terminus16";
     keyMap = "us";
   };
 
-  # Storage Cleanup
   nix.settings.auto-optimise-store = true;
   nix.gc = {
     automatic = true;
@@ -58,6 +53,5 @@
     options = "--delete-older-than 30d";
   };
 
-  # SSD 
   services.fstrim.enable = true;
 }

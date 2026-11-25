@@ -47,7 +47,6 @@
     };
   };
 
-  # Tailscale SSH enable
   services.tailscale.extraSetFlags = [ "--ssh" ];
 
   # Firewall (nftables). LAN services here; cluster ports are in node.nix.
