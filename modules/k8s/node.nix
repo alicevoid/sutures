@@ -3,7 +3,9 @@
 # Host settings that Cilium needs on every k3s node, server and agent.
 
 {
-  # The firewall is off (server.nix). If it is turned on, pods still reach the API server and CoreDNS.
+  # Pods reach the host through the trusted Cilium interfaces.
+  #   Cluster ports accept only the nodes and the pod CIDR: VXLAN, Cilium health, Hubble,
+  #   node-exporter, Cilium and Envoy metrics, kubelet.
   networking.firewall = {
     trustedInterfaces = [
       "cilium_host"
@@ -11,6 +13,10 @@
       "cilium_vxlan"
       "lxc+"
     ];
+    extraInputRules = ''
+      ip saddr { 10.0.0.141, 10.0.0.65, 10.42.0.0/16 } udp dport 8472 accept
+      ip saddr { 10.0.0.141, 10.0.0.65, 10.42.0.0/16 } tcp dport { 4240, 4244, 9100, 9962-9965, 10250 } accept
+    '';
   };
 
   # Tailscale sets src_valid_mark=1, and the kernel then drops Envoy's backend replies as

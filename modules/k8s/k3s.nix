@@ -21,7 +21,6 @@
     ];
   };
 
-  # The firewall is off (server.nix); these apply if it is turned on.
   networking.firewall = {
     allowedTCPPorts = [
       6443 # Kubernetes API server

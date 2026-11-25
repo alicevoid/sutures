@@ -54,7 +54,8 @@
     };
   };
 
-  # The firewall is off (server.nix); these apply if it is turned on.
+  networking.firewall.enable = true;
+  networking.nftables.enable = true;
   networking.firewall.allowedUDPPorts = [ 53 ];
   networking.firewall.allowedTCPPorts = [ 53 ];
 

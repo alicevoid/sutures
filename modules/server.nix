@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -19,8 +20,18 @@
     };
   };
 
-  # Firewall
-  networking.firewall.enable = false;
+  # Firewall (nftables). Off by default. A host turns it on once its rules are tested, by setting
+  #   both networking.firewall.enable and networking.nftables.enable.
+  #   Never flush the whole ruleset: Cilium, kube and Tailscale keep their own tables.
+  #   Reverse path "loose": "strict" drops Tailscale and Cilium traffic.
+  #   tailscale0 is trusted: every tailnet device is Alice's.
+  networking.firewall = {
+    enable = lib.mkDefault false;
+    checkReversePath = "loose";
+    trustedInterfaces = [ "tailscale0" ];
+  };
+  networking.nftables.flushRuleset = false;
+  services.tailscale.openFirewall = true;
 
   # mDNS publishing:
   #   NOTE: This is enabled already (see common.nix)
@@ -49,40 +60,4 @@
 
   # SSD 
   services.fstrim.enable = true;
-
-  virtualisation.libvirtd = {
-    enable = true;
-    dbus.enable = true;
-    qemu = {
-      package = pkgs.qemu_kvm;
-      runAsRoot = true;
-      swtpm.enable = true;
-    };
-  };
-
-  services.cockpit = {
-    enable = true;
-    port = 8010;
-    plugins = with pkgs; [
-      cockpit-machines
-      cockpit-zfs
-    ];
-    allowed-origins = [ "*" ];
-    settings.WebService = {
-      ProtocolHeader = "X-Forwarded-Proto";
-      ForwardedForHeader = "X-Forwarded-For";
-      AllowUnencrypted = true;
-    };
-  };
-
-  # Fix libvirt-dbus not having access to libvirtd.
-  # https://github.com/cockpit-project/cockpit-machines/issues/832
-  # https://search.nixos.org/options?channel=26.05&query=libvirt&type=options#show=option%253Avirtualisation.libvirtd.enable
-  # https://github.com/NixOS/nixpkgs/blob/cd4ea8d57de16f4810bc5f14207bac45fbf19f67/nixos/modules/virtualisation/libvirtd.nix#L448
-  users.users.libvirtdbus.extraGroups = [ "libvirtd" ];
-
-  environment.systemPackages = with pkgs; [
-    virt-manager
-  ];
-
 }
