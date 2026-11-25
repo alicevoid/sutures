@@ -13,6 +13,11 @@
       "cilium_vxlan"
       "lxc+"
     ];
+    # Cilium marks Gateway traffic 0x200 for Envoy, and that mark routes to a table with only a
+    #   local route, so the reverse-path check drops it.
+    extraReversePathFilterRules = ''
+      meta mark & 0x00000f00 == 0x00000200 accept
+    '';
     extraInputRules = ''
       ip saddr { 10.0.0.141, 10.0.0.65, 10.42.0.0/16 } udp dport 8472 accept
       ip saddr { 10.0.0.141, 10.0.0.65, 10.42.0.0/16 } tcp dport { 4240, 4244, 9100, 9962-9965, 10250 } accept
