@@ -267,6 +267,11 @@
     };
     script = ''
       set -uo pipefail
+      # Known-harmless ffmpeg messages, matched in full. Reasons: vault QUIRKS "Downloads".
+      ignore=(
+        -e 'Referenced QT chapter track not found$'
+        -e 'Application provided invalid, non monotonically increasing dts to muxer in stream [0-9]+: [0-9]+ >= [0-9]+$'
+      )
       bad=0
       checked=0
       while IFS= read -r -d "" f; do
@@ -279,6 +284,7 @@
             ffmpeg -v error -nostdin -sseof -30 -i "$f" -f null -
           } 2>&1 || true
         )
+        err=$(printf '%s\n' "$err" | grep -v -E "''${ignore[@]}" || true)
         if [ -n "$err" ]; then
           bad=$((bad + 1))
           echo "BAD: $f"
