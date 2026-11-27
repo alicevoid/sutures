@@ -28,6 +28,9 @@
         settings = {
           main = {
             capslock = "escape";
+            rightshift = "rightshift";
+            rightcontrol = "rightcontrol";
+            rightalt = "rightalt";
           };
           alt = {
             sysrq = "command(systemd-run --user --machine=alice@.host --collect -- ${pkgs.flameshot}/bin/flameshot gui)";
