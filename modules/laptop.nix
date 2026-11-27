@@ -9,7 +9,10 @@
 #   laptop config stuff goes here if I ever actually care enough
 
 {
-  imports = [ ./desktop.nix ];
+  imports = [
+    ./desktop.nix
+    ./pinball.nix
+  ];
 
   # TODO:
   #   look into power mgmt / TLP defaults
