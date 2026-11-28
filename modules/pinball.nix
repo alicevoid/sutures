@@ -3,11 +3,8 @@
   ...
 }:
 
-# Pinball (github:haylinmoore/pinball.nix)
-#   run: pinball [table]
-#   Fits the VPX window layout to the external monitor, or to the laptop panel
-#   when no external monitor is connected. See vpx-layout.py.
-#   Force a monitor: VPX_LAYOUT_OUTPUT=eDP-1 pinball
+# Usage: pinball [table]
+# Force a monitor: VPX_LAYOUT_OUTPUT=eDP-1 pinball
 {
   environment.systemPackages = [
     (pkgs.writeShellApplication {
